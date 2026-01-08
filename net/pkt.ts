@@ -1,4 +1,5 @@
-import { Vector2, Vector3 } from "../math";
+import { getBitFlagLE, getX, getZ, toString, vec2, Vector2, Vector3 } from "../math";
+import type { AIState, Orders } from "../ecf/systems/ai/shared";
 import { Reader, Writer } from "./enet";
 
 export enum ENetChannels {
@@ -276,6 +277,12 @@ export enum Teams {
     Chaos = 200,
 }
 
+export enum NetNodeID
+{
+    Spawned = 0x40,
+    Map = 0xFF,
+}
+
 const buffer = Buffer.alloc(10 * 1460)
 
 export abstract class BasePacket {
@@ -292,7 +299,7 @@ export abstract class BasePacket {
 
     public read(bufferOrReader: Buffer | Reader): this {
         if(!(this instanceof World_SendCamera_Server))
-        console.log('read', this.constructor.name)
+        console.log('read', this.constructor.name, bufferOrReader)
         //console.log('buffer', buffer)
 
         const reader =
@@ -334,11 +341,12 @@ export abstract class BasePacket {
             MovementData.prototype._write.call(this, writer)
         this._write(writer)
 
-        //if(!(this instanceof World_SendCamera_Server_Acknologment))
-        //console.log('result', buffer)
+        const result =  buffer.subarray(0, writer.position)
+
+        if(!(this instanceof World_SendCamera_Server_Acknologment))
+        console.log('result', result)
         
-        return buffer.subarray(0, writer.position)
-        //return buffer
+        return result
     }
 
     //constructor(obj?: any){
@@ -350,9 +358,9 @@ export abstract class GamePacket extends BasePacket {
     public senderNetID: number = 0
     //public override _size(){ return 5 }
     public override _read(reader: Reader): void {
-        const type = reader.readByte()
+        const type = reader.readByte("type")
         console.assert(type == this._type(), `Assertion failed: type (${type}) == this._type() (${this._type()})`)
-        this.senderNetID = reader.readUInt32()
+        this.senderNetID = reader.readUInt32("senderNetID")
     }
     public override _write(writer: Writer): void {
         writer.writeByte(this._type())
@@ -366,7 +374,7 @@ export abstract class GamePacket extends BasePacket {
 export abstract class DefaultPayload extends BasePacket {
     //public override _size(){ return 1 + 3 }
     public override _read(reader: Reader): void {
-        const type = reader.readByte()
+        const type = reader.readByte("type")
         reader.readBytes(3)
         console.assert(type == this._type(), `Assertion failed: type (${type}) == this._type() (${this._type()})`)
     }
@@ -395,10 +403,10 @@ export class RegistryPacket extends BasePacket {
 
     //public override _size(){ return 1 + 3 + 4 + 8 + 8 }
     public override _read(reader: Reader): void {
-        this.action = reader.readByte()
+        this.action = reader.readByte("action")
         reader.readBytes(3)
-        this.cid = reader.readUInt32()
-        this.playerID = reader.readUInt64()
+        this.cid = reader.readUInt32("cid")
+        this.playerID = reader.readUInt64("playerID")
         this.signiture = reader.readBytes(8)
     }
 
@@ -421,8 +429,8 @@ export class RequestJoinTeam extends DefaultPayload {
     public override _type(){ return PayloadType.RequestJoinTeam }
     //public override _size(){ return 4 + 4 }
     public override _read(reader: Reader): void {
-        this.playerID = reader.readUInt32()
-        this.team = reader.readUInt32()
+        this.playerID = reader.readUInt32("playerID")
+        this.team = reader.readUInt32("team")
     }
     public override _write(writer: Writer): void {
         writer.writeUInt32(this.playerID)
@@ -444,10 +452,10 @@ export class RequestReskin extends DefaultPayload {
     public override _type(){ return PayloadType.RequestReskin }
     //public override _size(){ return 8 + 8 + 4 + 24*8 + 24*8 + 8 + 8 }
     public override _read(reader: Reader): void {
-        reader.readUInt32()
-        this.playerId = reader.readUInt64()
-        this.skinID = reader.readUInt32()
-        const bufferLen = reader.readUInt32()
+        reader.readUInt32("padding")
+        this.playerId = reader.readUInt64("playerId")
+        this.skinID = reader.readUInt32("skinID")
+        const bufferLen = reader.readUInt32("bufferLen")
         this.buffer = reader.readCString(bufferLen)
     }
     public override _write(writer: Writer): void {
@@ -487,18 +495,18 @@ export class TeamRosterUpdate extends DefaultPayload {
     public override _type(){ return PayloadType.TeamRosterUpdate }
     //public override _size(){ return 4 + 4 + 4 + 24*8 + 24*8 + 4 + 4 }
     public override _read(reader: Reader): void {
-        this.teamsize_order = reader.readUInt32()
-        this.teamsize_chaos = reader.readUInt32()
+        this.teamsize_order = reader.readUInt32("teamsize_order")
+        this.teamsize_chaos = reader.readUInt32("teamsize_chaos")
         
-        reader.readUInt32()
+        reader.readUInt32("padding")
 
         for(let i = 0; i < 24; i++)
-            this.orderMembers[i] = reader.readUInt64()
+            this.orderMembers[i] = reader.readUInt64(`orderMembers[${i}]`)
         for(let i = 0; i < 24; i++)
-            this.chaosMembers[i] = reader.readUInt64()
+            this.chaosMembers[i] = reader.readUInt64(`chaosMembers[${i}]`)
         
-        this.current_teamsize_order = reader.readUInt32()
-        this.current_teamsize_chaos = reader.readUInt32()
+        this.current_teamsize_order = reader.readUInt32("current_teamsize_order")
+        this.current_teamsize_chaos = reader.readUInt32("current_teamsize_chaos")
     }
     public override _write(writer: Writer): void {
         writer.writeUInt32(this.teamsize_order)
@@ -551,7 +559,7 @@ export class World_SendGameNumber extends GamePacket {
     public override _type(){ return Type.World_SendGameNumber }
     //public override _size(){ return 8 }
     public override _read(reader: Reader): void {
-        this.gameID = reader.readUInt64()
+        this.gameID = reader.readUInt64("gameID")
     }
     public override _write(writer: Writer): void {
         writer.writeUInt64(this.gameID)
@@ -642,7 +650,7 @@ export class SynchSimTimeS2C extends GamePacket {
     public override _type(){ return Type.SynchSimTimeS2C }
     //public override _size(){ return 4 }
     public override _read(reader: Reader){
-        this.synchtime = reader.readFloat()
+        this.synchtime = reader.readFloat("synchtime")
     }
     public override _write(writer: Writer){
         writer.writeFloat(this.synchtime)
@@ -699,6 +707,16 @@ export class WaypointGroup extends GamePacket {
     //undefined field9_0x9;
     //undefined field10_0xa;
     //uchar data[0];
+    syncID: number = 0
+    movements: MovementDataNormal[] = []
+    public override _type(){ return Type.WaypointGroup }
+    public override _write(writer: Writer){
+        writer.writeUInt32(this.syncID)
+        writer.writeUInt16(this.movements.length)
+        for(const movement of this.movements){
+            movement._write(writer)
+        }
+    }
 }
 export class S2C_PlayEmote extends GamePacket {
     //ulong emotId;
@@ -763,8 +781,8 @@ export class S2C_StartSpawn extends GamePacket {
     public override _type(){ return Type.S2C_StartSpawn }
     //public override _size(){ return 2 + 2 }
     public override _read(reader: Reader){
-        this.numBotsOrder = reader.readUInt16()
-        this.numBotsChaos = reader.readUInt16()
+        this.numBotsOrder = reader.readUInt16("numBotsOrder")
+        this.numBotsChaos = reader.readUInt16("numBotsChaos")
     }
     public override _write(writer: Writer){
         writer.writeUInt16(this.numBotsOrder)
@@ -891,7 +909,7 @@ export class S2C_QueryStatusAns extends GamePacket {
         writer.writeBool(this.res)
     }
     public override _read(reader: Reader): void {
-        this.res = reader.readBool()
+        this.res = reader.readBool("res")
     }
 }
 export class S2C_IncrementPlayerScore extends GamePacket {
@@ -1022,9 +1040,9 @@ export abstract class MovementData extends BasePacket {
     syncID: number = 0
     public abstract _type(): MovementDataType
     public override _read(reader: Reader){
-        const type = reader.readByte()
+        const type = reader.readByte("type")
         console.assert(type == this._type(), `Assertion failed: type (${type}) == this._type() (${this._type()})`)
-        this.syncID = reader.readUInt32()
+        this.syncID = reader.readUInt32("syncID")
     }
     public override _write(writer: Writer){
         writer.writeByte(this._type())
@@ -1043,26 +1061,58 @@ export class MovementDataNormal extends MovementData {
     waypoints: Vector2[] = []
     public override _type(){ return MovementDataType.Normal }
     public override _read(reader: Reader){
-        this.hasTeleportID = (reader.readUInt16() & 1) != 0
-        let size = reader.readUInt16() & 0x7F
+        this.hasTeleportID = (reader.readUInt16("flags") & 1) != 0
+        let size = reader.readUInt16("size")
         if(size > 0){
-            this.teleportNetID = reader.readUInt32()
+            this.teleportNetID = reader.readUInt32("teleportNetID")
             if(this.hasTeleportID)
-                this.teleportID = reader.readByte()
+                this.teleportID = reader.readByte("teleportID")
 
             //TODO: Compressed waypoints
+            const flags = size > 1 ?
+                reader.readBytes(Math.floor((size - 2) / 4 + 1), "flags") :
+                undefined!
+
+            let lastX = reader.readInt16("lastX")
+            let lastZ = reader.readInt16("lastZ")
+            console.log('waypoint', 0, lastX, lastZ)
+            this.waypoints.push(vec2(lastX, lastZ))
+            
+            for(let i = 1, flag = 0; i < size; i++){
+                if(getBitFlagLE(flags, flag++)){
+                    lastX += reader.readSByte("lastX offset")
+                } else {
+                    lastX = reader.readInt16("lastX")
+                }
+                if(getBitFlagLE(flags, flag++)){
+                    lastZ += reader.readSByte("lastZ offset")
+                } else {
+                    lastZ = reader.readInt16("lastZ")
+                }
+                console.log('waypoint', i, lastX, lastZ)
+                this.waypoints.push(vec2(lastX, lastZ))
+            }
         }
     }
     public override _write(writer: Writer){
         console.assert(this.waypoints.length <= 0x7F, `Assertion failed: this.waypoints.length (${this.waypoints.length}) <= 0x7F`)
         writer.writeUInt16(+this.hasTeleportID)
-        writer.writeUInt16(this.waypoints.length & 0x7F)
+        writer.writeUInt16(this.waypoints.length)
         if(this.waypoints.length){
             writer.writeUInt32(this.teleportNetID)
             if(this.hasTeleportID)
                 writer.writeByte(this.teleportID)
 
             //TODO: Compressed waypoints
+
+            const size = this.waypoints.length
+            const count = Math.floor((size - 2) / 4 + 1)
+            writer.writePad(count)
+            for(const waypoint of this.waypoints){
+                console.log('waypoint', waypoint, toString(waypoint))
+                writer.writeInt16(getX(waypoint))
+                writer.writeInt16(getZ(waypoint))
+            }
         }
     }
 }
@@ -1168,7 +1218,7 @@ export class C2S_Reconnect extends GamePacket {
     public override _type(){ return Type.C2S_Reconnect }
     //public override _size(){ return 1 }
     public override _read(reader: Reader): void {
-        this.isFullReconnect = reader.readBool()
+        this.isFullReconnect = reader.readBool("isFullReconnect")
     }
     public override _write(writer: Writer): void {
         writer.writeBool(this.isFullReconnect)
@@ -1330,7 +1380,7 @@ export class S2C_StartGame extends GamePacket {
     public override _type(){ return Type.S2C_StartGame }
     //public override _size(){ return 1 }
     public override _read(reader: Reader){
-        this.tournamentPauseEnabled = reader.readBool()
+        this.tournamentPauseEnabled = reader.readBool("tournamentPauseEnabled")
     }
     public override _write(writer: Writer){
         writer.writeBool(this.tournamentPauseEnabled)
@@ -1388,6 +1438,14 @@ export class UpdateLevelPropS2C extends GamePacket {
 }
 export class S2C_AI_State extends GamePacket {
     //int stateID;
+    stateID: AIState = 0
+    public override _type(){ return Type.S2C_AI_State }
+    public override _read(reader: Reader){
+        this.stateID = reader.readUInt32("stateID")
+    }
+    public override _write(writer: Writer){
+        writer.writeUInt32(this.stateID)
+    }
 }
 export class SetItem extends GamePacket {
     //uchar slot;
@@ -1554,21 +1612,6 @@ export class S2C_ToggleInputLockingFlag extends GamePacket {
     //uint inputLockingFlags;
 }
 
-export enum Orders {
-    NONE = 0,
-    HOLD = 1,
-    MOVETO = 2,
-    ATTACKTO = 3,
-    TEMP_CASTSPELL = 4,
-    PETHARDATTACK = 5,
-    PETHARDMOVE = 6,
-    ATTACKMOVE = 7,
-    TAUNT = 8,
-    PETHARDRETURN = 9,
-    STOP = 10,
-    PETHARDSTOP = 11,
-}
-
 export class NPC_IssueOrderReq extends GamePacket {
     //struct OrderInfo info;
     //struct OrderInfo {
@@ -1580,13 +1623,14 @@ export class NPC_IssueOrderReq extends GamePacket {
     order: Orders = 0
     pos: Vector3 = Vector3.Zero
     targetNetID: number = 0
-    data: MovementData = MovementData.None
-    public override _type(){ return Type.SynchVersionC2S }
+    data!: MovementDataNormal //= MovementData.None
+    public override _type(){ return Type.NPC_IssueOrderReq }
     public override _read(reader: Reader){
-        this.order = reader.readByte()
-        this.pos = Vector3.read(reader)
-        this.targetNetID = reader.readUInt32()
-        this.data = new MovementDataNormal().read(reader)
+        this.order = reader.readByte("order")
+        this.pos = Vector3.read(reader, "pos")
+        this.targetNetID = reader.readUInt32("targetNetID")
+        this.data = new MovementDataNormal()
+        this.data._read(reader)
     }
 }
 
@@ -1600,8 +1644,8 @@ export class SynchVersionC2S extends GamePacket {
     public override _type(){ return Type.SynchVersionC2S }
     //public override _size(){ return 4 + 4 + 256 }
     public override _read(reader: Reader){
-        this.time_LastClient = reader.readFloat()
-        this.clientNetID = reader.readUInt32()
+        this.time_LastClient = reader.readFloat("time_LastClient")
+        this.clientNetID = reader.readUInt32("clientNetID")
         this.versionString = reader.readCString(256)
     }
 }
@@ -1618,10 +1662,10 @@ export class World_SendCamera_Server extends GamePacket {
     public override _type(){ return Type.World_SendCamera_Server }
     //public override _size(){ return 3*4 + 3*4 + 4 + 1 }
     public override _read(reader: Reader){
-        this.cameraPos = Vector3.read(reader)
-        this.cameraDir = Vector3.read(reader)
-        this.clientID = reader.readUInt32()
-        this.syncID = reader.readByte()
+        this.cameraPos = Vector3.read(reader, "cameraPos")
+        this.cameraDir = Vector3.read(reader, "cameraDir")
+        this.clientID = reader.readUInt32("clientID")
+        this.syncID = reader.readByte("syncID")
     }
 }
 export class Barrack_SpawnUnit extends GamePacket {
@@ -1670,7 +1714,80 @@ export class OnReplication extends GamePacket {
     //undefined field8_0x8;
     //undefined field9_0x9;
     //uchar data[0];
+
+    syncID: number = 0
+    datas: ReplicationData[] = []
+
+    public override _type(){ return Type.OnReplication }
+    public override _write(writer: Writer){
+        writer.writeUInt32(this.syncID)
+        writer.writeByte(this.datas.length)
+        for(const data of this.datas)
+            data.write(writer)
+    }
 }
+export class ReplicationData extends BasePacket {
+    
+    unitNetID: number = 0
+    values: number[] = []
+    skip: boolean[] = []
+
+    public override _write(writer: Writer){
+        writer.writeByte(this.values[0]!)
+        writer.writeUInt32(this.unitNetID)
+        console.assert(this.values.length == this.skip.length)
+        for(let i = 1; i < this.values.length; i++){
+            if(this.skip[i]) continue
+            writer.writeUInt32(this.values[i]!)
+        }
+    }
+}
+/*
+export class ReplicationData extends BasePacket {
+    
+    unitNetID: number = 0
+    values: number[][] = []
+
+    public override _read(reader: Reader){
+        const primaryIdArray = reader.readByte()
+        this.unitNetID = reader.readUInt32()
+        for (var primaryId = 0; primaryId < 8; primaryId++){
+            if((primaryIdArray & (1 << primaryId)) != 0){
+                const secondaryIdArray = reader.readUInt32()
+                for (var secondaryId = 0; secondaryId < 32; secondaryId++){
+                    if ((secondaryIdArray & (1 << secondaryId)) != 0){
+                        const value = reader.readUInt32()
+                        this.values[primaryId] ??= []
+                        this.values[primaryId]![secondaryId] = value
+                    }
+                }
+            }
+        }
+    }
+
+    public override _write(writer: Writer){
+        
+        let primaryIdArray = 0
+        for(const primaryId in this.values)
+            primaryIdArray |= 1 << Number(primaryId)
+
+        writer.writeByte(primaryIdArray)
+        writer.writeUInt32(this.unitNetID)
+        
+        for(const row of this.values){
+        
+            let secondaryIdArray = 0
+            for(const secondaryId in row)
+                secondaryIdArray |= 1 << Number(secondaryId)
+            
+            writer.writeUInt32(secondaryIdArray)
+        
+            for(const value of row)
+                writer.writeUInt32(value)
+        }
+    }
+}
+*/
 export class SwapItemReq extends GamePacket {
     //uchar source;
     //uchar dest;
@@ -1698,8 +1815,8 @@ export class SynchVersionS2C extends GamePacket {
     //     return size
     // }
     public override _read(reader: Reader){
-        this.isVersionOk = reader.readBool()
-        this.mapToLoad = reader.readUInt32()
+        this.isVersionOk = reader.readBool("isVersionOk")
+        this.mapToLoad = reader.readUInt32("mapToLoad")
         for(let i = 0; i < 12; i++){
             this.playerInfo[i] = new PlayerLiteInfo().read(reader)
         }
@@ -1770,16 +1887,16 @@ export class PlayerLiteInfo extends BasePacket {
         writer.writeUInt32(this.profileIconId)
     }
     public override _read(reader: Reader){
-        this.playerId = reader.readUInt64()
-        this.summonerLevel = reader.readUInt16()
-        this.summonerSpell1 = reader.readUInt32()
-        this.summonerSpell2 = reader.readUInt32()
-        this.isBot = reader.readBool()
-        this.teamId = reader.readUInt32()
+        this.playerId = reader.readUInt64("playerId")
+        this.summonerLevel = reader.readUInt16("summonerLevel")
+        this.summonerSpell1 = reader.readUInt32("summonerSpell1")
+        this.summonerSpell2 = reader.readUInt32("summonerSpell2")
+        this.isBot = reader.readBool("isBot")
+        this.teamId = reader.readUInt32("teamId")
         this.botName = reader.readCString(28)
         this.botSkinName = reader.readCString(28)
-        this.botDifficulty = reader.readUInt32()
-        this.profileIconId = reader.readUInt32()
+        this.botDifficulty = reader.readUInt32("botDifficulty")
+        this.profileIconId = reader.readUInt32("profileIconId")
     }
 }
 
@@ -1841,7 +1958,7 @@ export class World_SendCamera_Server_Acknologment extends GamePacket {
     public override _type(){ return Type.World_SendCamera_Server }
     //public override _size(){ return 1 }
     public override _read(reader: Reader){
-        this.syncID = reader.readByte()
+        this.syncID = reader.readByte("syncID")
     }
     public override _write(writer: Writer){
         writer.writeByte(this.syncID)
@@ -1915,13 +2032,13 @@ abstract class Ping_Load_Info extends GamePacket {
 
     //public override _size(){ return 4 + 8 + 4 + 4 + 4 + 4 }
     public override _read(reader: Reader){
-        this.clientID = reader.readUInt32()
-        this.playerID = reader.readUInt64()
-        this.percentage = reader.readFloat()
-        this.ETA = reader.readFloat()
-        this.count = reader.readUInt16()
-        this.ping = reader.readUInt16()
-        this.ready = reader.readBool()
+        this.clientID = reader.readUInt32("clientID")
+        this.playerID = reader.readUInt64("playerID")
+        this.percentage = reader.readFloat("percentage")
+        this.ETA = reader.readFloat("ETA")
+        this.count = reader.readUInt16("count")
+        this.ping = reader.readUInt16("ping")
+        this.ready = reader.readBool("ready")
     }
     public override _write(writer: Writer){
         writer.writeUInt32(this.clientID)

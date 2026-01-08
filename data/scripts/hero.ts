@@ -1,373 +1,282 @@
-import { Vector3 } from "../../math"
-import { Orders } from "../../net/pkt"
-
-enum AIState {
-    IDLE = 0,
-    SOFTATTACK = 1,
-    HARDATTACK = 2,
-    ATTACKMOVE = 3,
-    STANDING = 4,
-    MOVE = 5,
-    ATTACK = 7,
-    HARDIDLE = 9,
-    TAUNTED = 11,
-    FEARED = 13,
-    CHARMED = 14,
-    ATTACK_GOING_TO_LAST_KNOWN_LOCATION = 16,
-    HALTED = 17,
-}
-
-enum StopReason {
-    IMMEDIATELY = 0,
-    MOVING = 2,
-}
-
-enum LostReason {
-    UNDEFINED = 0,
-    LOST_VISIBILITY = 1,
-}
-
-enum BuffType {
-    Internal = 0,
-    Aura = 1,
-    CombatEnchancer = 2,
-    CombatDehancer = 3,
-    SpellShield = 4,
-    Stun = 5,
-    Invisibility = 6,
-    Silence = 7,
-    Taunt = 8,
-    Polymorph = 9,
-    Slow = 10,
-    Snare = 11,
-    Damage = 12,
-    Heal = 13,
-    Haste = 14,
-    SpellImmunity = 15,
-    PhysicalImmunity = 16,
-    Invulnerability = 17,
-    Sleep = 18,
-    NearSight = 19,
-    Frenzy = 20,
-    Fear = 21,
-    Net = 22,
-    Poison = 23,
-    Suppression = 24,
-    Blind = 25,
-    AmmoStack = 26
-}
-
-type Unit = {}
-
-function getPercentAttackSpeedMod() { return 0 }
-
-function assignTargetPosInPos() { }
-function clearTargetPosInPos() { }
-
-function getState() { return AIState.IDLE }
-function setState(state: AIState) { }
-function netSetState(state: AIState) { }
-function setStateAndMove(state: AIState, position: Vector3) { }
-function setStateAndMoveInPos(state: AIState) { }
-function setStateAndCloseToTarget(state: AIState, target: Unit) { }
-
-function initTimer(name: string, interval: number, unk: boolean) { }
-function resetAndStartTimer(name: string) { }
-function stopTimer(name: string) { }
-
-function getTarget() { return null! as Unit }
-function findTargetInAcR() { return null! as Unit }
-function getTargetOrFindTargetInAcR() { return null! as Unit }
-function targetInAttackRange() { return false }
-function targetInCancelAttackRange() { return false }
-function isTargetLost() { return false }
-function getLostTargetIfVisible() { return null! as Unit }
-
-function getTauntTarget() { return null! as Unit }
-function getFearLeashPoint() { return Vector3.Zero }
-
-function makeWanderPoint(point: Vector3, distance: number) { return Vector3.Zero }
-
-function turnOnAutoAttack(target: Unit) { }
-function turnOffAutoAttack(reason: StopReason) { }
-function lastAutoAttackFinished() { return false }
-
-function canSeeMe(observer: Unit) { return false }
-
-const me = null! as Unit
-function spellBuffRemoveType(target: Unit, type: BuffType) { }
-
-function isMoving() { return false }
-function isMovementStopped() { return false }
-
-function say(what: string) { }
-
-function distanceBetweenObjectAndTargetPosSq(obj: Unit) { return 0 }
+import { AIComponent } from "../../ecf/systems/ai/component"
+import { AIState, LostReason, Orders, StopReason } from "../../ecf/systems/ai/shared"
+import { BuffType } from "../../ecf/systems/buffs/shared"
+import type { Unit } from "../../ecf/unit"
+import { makeWanderPoint } from "../../math"
 
 const FEAR_WANDER_DISTANCE = 500
 
-function calculateAttackTimer() {
-    let checkAttackTimer = 1.6 / (getPercentAttackSpeedMod() + 1)
-    if (checkAttackTimer < 0.5) {
-        checkAttackTimer = 0.5
-    }
-    return checkAttackTimer
-}
+export class HeroAI extends AIComponent {
 
-function onInit() {
-    clearTargetPosInPos()
-    setState(AIState.IDLE)
-    initTimer("TimerDistanceScan", 0.2, true)
-    initTimer("TimerCheckAttack", 0.2, true)
-    initTimer("TimerFeared", 1, true)
-    stopTimer("TimerFeared")
-    return false
-}
-
-function onOrder(order: Orders, target: Unit) {
-    const state = getState()
-    if (state === AIState.HALTED) {
-        return false
-    }
-    if (state === AIState.TAUNTED || state === AIState.FEARED || state === AIState.CHARMED) {
-        return false
-    }
-    if (order === Orders.TAUNT) {
-        setStateAndCloseToTarget(AIState.HARDATTACK, target)
-        clearTargetPosInPos()
-        return true
-    }
-    if (order === Orders.ATTACKTO) {
-        setStateAndCloseToTarget(AIState.HARDATTACK, target)
-        assignTargetPosInPos()
-        if (targetInAttackRange() === true) {
-            turnOnAutoAttack(getTarget())
-        } else {
-            turnOffAutoAttack(StopReason.MOVING)
+    protected calculateAttackTimer() {
+        let checkAttackTimer = 1.6 / (this.getPercentAttackSpeedMod() + 1)
+        if (checkAttackTimer < 0.5) {
+            checkAttackTimer = 0.5
         }
-        return true
+        return checkAttackTimer
     }
-    if (order === Orders.ATTACKMOVE) {
-        const newTarget = findTargetInAcR()
-        if (newTarget !== undefined) {
-            setStateAndCloseToTarget(AIState.SOFTATTACK, newTarget)
+
+    protected override onInit() {
+        this.clearTargetPosInPos()
+        this.setState(AIState.IDLE)
+        this.initTimer(this.timerDistanceScan, 0.2, true)
+        this.initTimer(this.timerCheckAttack, 0.2, true)
+        this.initTimer(this.timerFeared, 1, true)
+        this.stopTimer(this.timerFeared)
+        return false
+    }
+
+    protected override onOrder(order: Orders, target?: Unit) {
+        const state = this.getState()
+        if (state == AIState.HALTED) {
+            return false
+        }
+        if (state == AIState.TAUNTED || state == AIState.FEARED || state == AIState.CHARMED) {
+            return false
+        }
+        if (order == Orders.TAUNT) {
+            console.assert(target != undefined)
+            this.setStateAndCloseToTarget(AIState.HARDATTACK, target!)
+            this.clearTargetPosInPos()
             return true
         }
-        setStateAndMoveInPos(AIState.ATTACKMOVE)
-        assignTargetPosInPos()
-        return true
-    }
-    if (order === Orders.MOVETO) {
-        setStateAndMoveInPos(AIState.MOVE)
-        assignTargetPosInPos()
-        return true
-    }
-    timerCheckAttack()
-    return false
-}
-
-function onTargetLost(reason: LostReason, target: Unit) {
-    const state = getState()
-    if (state === AIState.HALTED) {
-        return
-    }
-    if (AIState.ATTACK_GOING_TO_LAST_KNOWN_LOCATION !== state) {
-        if (
-            reason === LostReason.LOST_VISIBILITY &&
-            state !== AIState.SOFTATTACK &&
-            target !== undefined
-        ) {
-            setStateAndCloseToTarget(AIState.ATTACK_GOING_TO_LAST_KNOWN_LOCATION, target)
-        } else {
-            timerCheckAttack()
-        }
-    }
-}
-
-function onTauntBegin() {
-    if (getState() === AIState.HALTED) {
-        return
-    }
-    const tauntTarget = getTauntTarget()
-    if (tauntTarget !== undefined) {
-        setStateAndCloseToTarget(AIState.TAUNTED, tauntTarget)
-    }
-}
-
-function onTauntEnd() {
-    if (getState() === AIState.HALTED) {
-        return
-    }
-    const tauntTarget = getTauntTarget()
-    if (tauntTarget !== undefined) {
-        setStateAndCloseToTarget(AIState.SOFTATTACK, tauntTarget)
-    } else {
-        netSetState(AIState.IDLE)
-        timerDistanceScan()
-        timerCheckAttack()
-    }
-}
-
-function onFearBegin() {
-    if (getState() === AIState.HALTED) {
-        return
-    }
-    const wanderPoint = makeWanderPoint(getFearLeashPoint(), FEAR_WANDER_DISTANCE)
-    setStateAndMove(AIState.FEARED, wanderPoint)
-    turnOffAutoAttack(StopReason.MOVING)
-    resetAndStartTimer("TimerFeared")
-}
-
-function onFearEnd() {
-    if (getState() === AIState.HALTED) {
-        return
-    }
-    stopTimer("TimerFeared")
-    netSetState(AIState.IDLE)
-    timerDistanceScan()
-    timerCheckAttack()
-}
-
-function timerFeared() {
-    if (getState() === AIState.HALTED) {
-        return
-    }
-    const wanderPoint = makeWanderPoint(getFearLeashPoint(), FEAR_WANDER_DISTANCE)
-    setStateAndMove(AIState.FEARED, wanderPoint)
-}
-
-function onCharmBegin() {
-    if (getState() === AIState.HALTED) {
-        return
-    }
-    netSetState(AIState.CHARMED)
-    turnOffAutoAttack(StopReason.IMMEDIATELY)
-    timerCheckAttack()
-}
-
-function onCharmEnd() {
-    if (getState() === AIState.HALTED) {
-        return
-    }
-    netSetState(AIState.IDLE)
-    timerDistanceScan()
-    timerCheckAttack()
-}
-
-function onStopMove() {
-    if (getState() === AIState.HALTED) {
-        return
-    }
-    clearTargetPosInPos()
-}
-
-function timerCheckAttack() {
-    const state = getState()
-    if (state === AIState.HALTED) {
-        return
-    }
-    if (
-        state === AIState.SOFTATTACK ||
-        state === AIState.HARDATTACK ||
-        state === AIState.TAUNTED ||
-        state === AIState.CHARMED
-    ) {
-        if (isTargetLost() === true || getTarget() === undefined) {
-            if (lastAutoAttackFinished() === false) {
-                initTimer("TimerCheckAttack", 0.1, true)
-                return false
-            }
-            const newTarget = findTargetInAcR()
-            if (newTarget !== undefined) {
-                if (state === AIState.CHARMED) {
-                    setStateAndCloseToTarget(AIState.CHARMED, newTarget)
-                } else if (canSeeMe(newTarget)) {
-                    setStateAndCloseToTarget(AIState.SOFTATTACK, newTarget)
-                }
-                return true
+        if (order == Orders.ATTACKTO) {
+            console.assert(target != undefined)
+            this.setStateAndCloseToTarget(AIState.HARDATTACK, target!)
+            this.assignTargetPosInPos()
+            if (this.targetInAttackRange() == true) {
+                const target = this.getTarget()!
+                console.assert(target != undefined)
+                this.turnOnAutoAttack(target)
             } else {
-                if (state === AIState.CHARMED) {
-                    spellBuffRemoveType(me, BuffType.Taunt)
-                }
-                netSetState(AIState.STANDING)
-                return true
+                this.turnOffAutoAttack(StopReason.MOVING)
             }
             return true
         }
-        if (targetInAttackRange() === true) {
-            turnOnAutoAttack(getTarget())
+        if (order == Orders.ATTACKMOVE) {
+            const newTarget = this.findTargetInAcR()
+            if (newTarget !== undefined) {
+                this.setStateAndCloseToTarget(AIState.SOFTATTACK, newTarget)
+                return true
+            }
+            this.setStateAndMoveInPos(AIState.ATTACKMOVE)
+            this.assignTargetPosInPos()
             return true
         }
-        if (targetInCancelAttackRange() === false) {
-            turnOffAutoAttack(StopReason.MOVING)
+        if (order == Orders.MOVETO) {
+            this.setStateAndMoveInPos(AIState.MOVE)
+            this.assignTargetPosInPos()
+            return true
         }
-    } else if (isMoving()) {
+        this.timerCheckAttack()
         return false
     }
-    initTimer("TimerCheckAttack", 0.1, true)
-}
 
-function timerDistanceScan() {
-    const state = getState()
-    if (state === AIState.HALTED || state === AIState.HARDIDLE) {
-        return
-    }
-    if (state === AIState.STANDING || state === AIState.IDLE) {
-        const target = getTargetOrFindTargetInAcR()
-        if (target !== undefined && canSeeMe(target)) {
-            setStateAndCloseToTarget(AIState.SOFTATTACK, target)
-            return true
+    protected override onTargetLost(reason: LostReason, target: Unit) {
+        const state = this.getState()
+        if (state == AIState.HALTED) {
+            return
+        }
+        if (AIState.ATTACK_GOING_TO_LAST_KNOWN_LOCATION !== state) {
+            if (
+                reason == LostReason.LOST_VISIBILITY &&
+                state !== AIState.SOFTATTACK &&
+                target !== undefined
+            ) {
+                this.setStateAndCloseToTarget(AIState.ATTACK_GOING_TO_LAST_KNOWN_LOCATION, target)
+            } else {
+                this.timerCheckAttack()
+            }
         }
     }
-    if (state === AIState.MOVE && isMovementStopped()) {
-        const target = getTargetOrFindTargetInAcR()
-        if (target !== undefined && canSeeMe(target)) {
-            setStateAndCloseToTarget(AIState.SOFTATTACK, target)
-            turnOnAutoAttack(target)
-            return true
+
+    protected override onTauntBegin() {
+        if (this.getState() == AIState.HALTED) {
+            return
         }
-        netSetState(AIState.IDLE)
-        return false
-    }
-    if (state === AIState.ATTACKMOVE) {
-        const target = getTargetOrFindTargetInAcR()
-        if (target !== undefined) {
-            setStateAndCloseToTarget(AIState.SOFTATTACK, target)
-            return true
-        } else if (distanceBetweenObjectAndTargetPosSq(me) <= 100) {
-            netSetState(AIState.STANDING)
-            clearTargetPosInPos()
-            return true
+        const tauntTarget = this.getTauntTarget()
+        if (tauntTarget !== undefined) {
+            this.setStateAndCloseToTarget(AIState.TAUNTED, tauntTarget)
         }
     }
-    if (state === AIState.ATTACK_GOING_TO_LAST_KNOWN_LOCATION) {
-        const target = getLostTargetIfVisible()
-        if (target !== undefined) {
-            setStateAndCloseToTarget(AIState.HARDATTACK, target)
+
+    protected override onTauntEnd() {
+        if (this.getState() == AIState.HALTED) {
+            return
+        }
+        const tauntTarget = this.getTauntTarget()
+        if (tauntTarget !== undefined) {
+            this.setStateAndCloseToTarget(AIState.SOFTATTACK, tauntTarget)
+        } else {
+            this.netSetState(AIState.IDLE)
+            this.timerDistanceScan()
+            this.timerCheckAttack()
         }
     }
-}
 
-function onAICommand(textToSay: string, unk: unknown) {
-    if (getState() === AIState.HALTED) {
-        return
+    protected override onFearBegin() {
+        if (this.getState() == AIState.HALTED) {
+            return
+        }
+        const wanderPoint = makeWanderPoint(this.getFearLeashPoint(), FEAR_WANDER_DISTANCE)
+        this.setStateAndMove(AIState.FEARED, wanderPoint)
+        this.turnOffAutoAttack(StopReason.MOVING)
+        this.resetAndStartTimer(this.timerFeared)
     }
-    say(textToSay)
-}
 
-function onReachedDestinationForGoingToLastLocation() {
-    if (getState() === AIState.HALTED) {
-        return
+    protected override onFearEnd() {
+        if (this.getState() == AIState.HALTED) {
+            return
+        }
+        this.stopTimer(this.timerFeared)
+        this.netSetState(AIState.IDLE)
+        this.timerDistanceScan()
+        this.timerCheckAttack()
     }
-    netSetState(AIState.IDLE)
-    timerDistanceScan()
-    timerCheckAttack()
-}
 
-function haltAI() {
-    stopTimer("TimerDistanceScan")
-    stopTimer("TimerCheckAttack")
-    stopTimer("TimerFeared")
-    turnOffAutoAttack(StopReason.IMMEDIATELY)
-    netSetState(AIState.HALTED)
+    protected timerFeared() {
+        if (this.getState() == AIState.HALTED) {
+            return
+        }
+        const wanderPoint = makeWanderPoint(this.getFearLeashPoint(), FEAR_WANDER_DISTANCE)
+        this.setStateAndMove(AIState.FEARED, wanderPoint)
+    }
+
+    protected override onCharmBegin() {
+        if (this.getState() == AIState.HALTED) {
+            return
+        }
+        this.netSetState(AIState.CHARMED)
+        this.turnOffAutoAttack(StopReason.IMMEDIATELY)
+        this.timerCheckAttack()
+    }
+
+    protected override onCharmEnd() {
+        if (this.getState() == AIState.HALTED) {
+            return
+        }
+        this.netSetState(AIState.IDLE)
+        this.timerDistanceScan()
+        this.timerCheckAttack()
+    }
+
+    protected override onStopMove() {
+        if (this.getState() == AIState.HALTED) {
+            return
+        }
+        this.clearTargetPosInPos()
+    }
+
+    protected timerCheckAttack() {
+        const state = this.getState()
+        if (state == AIState.HALTED) {
+            return
+        }
+        if (
+            state == AIState.SOFTATTACK ||
+            state == AIState.HARDATTACK ||
+            state == AIState.TAUNTED ||
+            state == AIState.CHARMED
+        ) {
+            if (this.isTargetLost() == true || this.getTarget() == undefined) {
+                if (this.lastAutoAttackFinished() == false) {
+                    this.initTimer(this.timerCheckAttack, 0.1, true)
+                    return false
+                }
+                const newTarget = this.findTargetInAcR()
+                if (newTarget !== undefined) {
+                    if (state == AIState.CHARMED) {
+                        this.setStateAndCloseToTarget(AIState.CHARMED, newTarget)
+                    } else if (this.canSeeMe(newTarget)) {
+                        this.setStateAndCloseToTarget(AIState.SOFTATTACK, newTarget)
+                    }
+                    return true
+                } else {
+                    if (state == AIState.CHARMED) {
+                        this.spellBuffRemoveType(this.me, BuffType.Taunt)
+                    }
+                    this.netSetState(AIState.STANDING)
+                    return true
+                }
+                //return true
+            }
+            if (this.targetInAttackRange() == true) {
+                const target = this.getTarget()!
+                console.assert(target != undefined)
+                this.turnOnAutoAttack(target)
+                return true
+            }
+            if (this.targetInCancelAttackRange() == false) {
+                this.turnOffAutoAttack(StopReason.MOVING)
+            }
+        } else if (this.isMoving()) {
+            return false
+        }
+        this.initTimer(this.timerCheckAttack, 0.1, true)
+    }
+
+    protected timerDistanceScan() {
+        const state = this.getState()
+        if (state == AIState.HALTED || state == AIState.HARDIDLE) {
+            return
+        }
+        if (state == AIState.STANDING || state == AIState.IDLE) {
+            const target = this.getTargetOrFindTargetInAcR()
+            if (target !== undefined && this.canSeeMe(target)) {
+                this.setStateAndCloseToTarget(AIState.SOFTATTACK, target)
+                return true
+            }
+        }
+        if (state == AIState.MOVE && this.isMovementStopped()) {
+            const target = this.getTargetOrFindTargetInAcR()
+            if (target !== undefined && this.canSeeMe(target)) {
+                this.setStateAndCloseToTarget(AIState.SOFTATTACK, target)
+                this.turnOnAutoAttack(target)
+                return true
+            }
+            this.netSetState(AIState.IDLE)
+            return false
+        }
+        if (state == AIState.ATTACKMOVE) {
+            const target = this.getTargetOrFindTargetInAcR()
+            if (target !== undefined) {
+                this.setStateAndCloseToTarget(AIState.SOFTATTACK, target)
+                return true
+            } else if (this.distanceBetweenObjectAndTargetPosSq(this.me) <= 100) {
+                this.netSetState(AIState.STANDING)
+                this.clearTargetPosInPos()
+                return true
+            }
+        }
+        if (state == AIState.ATTACK_GOING_TO_LAST_KNOWN_LOCATION) {
+            const target = this.getLostTargetIfVisible()
+            if (target !== undefined) {
+                this.setStateAndCloseToTarget(AIState.HARDATTACK, target)
+            }
+        }
+    }
+
+    protected override onAICommand(textToSay: string, unk: unknown){
+        if (this.getState() == AIState.HALTED) {
+            return
+        }
+        this.say(textToSay)
+    }
+
+    protected override onReachedDestinationForGoingToLastLocation() {
+        if (this.getState() == AIState.HALTED) {
+            return
+        }
+        this.netSetState(AIState.IDLE)
+        this.timerDistanceScan()
+        this.timerCheckAttack()
+    }
+
+    protected override haltAI() {
+        this.stopTimer(this.timerDistanceScan)
+        this.stopTimer(this.timerCheckAttack)
+        this.stopTimer(this.timerFeared)
+        this.turnOffAutoAttack(StopReason.IMMEDIATELY)
+        this.netSetState(AIState.HALTED)
+    }
 }

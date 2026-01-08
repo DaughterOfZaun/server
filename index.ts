@@ -1,9 +1,8 @@
-import { decrypt, encrypt } from "./blowfish"
-
+import { decrypt, encrypt } from "./net/blowfish"
 import { Peer, type WrappedPacket } from "./net/peer"
 import { ENetChannels, type BasePacket } from "./net/pkt"
+import { World } from "./ecf/world"
 import * as PKT from './net/pkt'
-import { World } from "./world"
 
 export function assign<T extends {}>(target: T, source: Partial<T>): T {
     return Object.assign(target, source)
@@ -97,9 +96,9 @@ function *processPacket(): Generator<void, void, WrappedPacket> {
             playerInfo: [
                 assign(new PKT.PlayerLiteInfo(), {
                     playerId: 1n,
-                    summonerLevel: 1,
-                    summonerSpell1: 0,
-                    summonerSpell2: 0,
+                    summonerLevel: 30,
+                    summonerSpell1: 0x03657421,
+                    summonerSpell2: 0x065E8695,
                     isBot: false,
                     teamId: 100,
                     botName: '',
@@ -205,9 +204,7 @@ function *processPacket(): Generator<void, void, WrappedPacket> {
         }
     }
 
-    setTimeout(() => {
-        world.tick()
-    }, 1000 / 30)
+    world.spin()
 
     while(true){
         let { channelID, data } = yield; data = decrypt(data)
@@ -233,6 +230,7 @@ function *processPacket(): Generator<void, void, WrappedPacket> {
             PKT.Type.C2S_WriteNavFlags_Acc,
             PKT.Type.C2S_StatsUpdateReq,
             PKT.Type.SynchSimTimeC2S,
+            PKT.Type.Waypoint_Acc,
             
             // GAME LOOP
             PKT.Type.C2S_ClientFinished,
@@ -276,7 +274,9 @@ function *processPacket(): Generator<void, void, WrappedPacket> {
         if(expected.includes(data[0]!)){
             if(data[0] == PKT.Type.NPC_IssueOrderReq){
                 const packet = new PKT.NPC_IssueOrderReq().read(data)
+
                 world.input(packet)
+            
             }
             else {
                 console.log('read', channelID, PKT.Type[data[0]!])

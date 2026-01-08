@@ -21,10 +21,10 @@ export namespace Vector3 {
         writer.writeFloat(float16array1[2]!)
         writer.writeFloat(float16array1[1]!)
     }
-    export function read(reader: Reader){
-        float16array1[0] = reader.readFloat()
-        float16array1[2] = reader.readFloat()
-        float16array1[1] = reader.readFloat()
+    export function read(reader: Reader, name?: string){
+        float16array1[0] = reader.readFloat(`${name}.x`)
+        float16array1[2] = reader.readFloat(`${name}.y`)
+        float16array1[1] = reader.readFloat(`${name}.z`)
         return bigint64array1[0] as Vector3
     }
 }
@@ -103,4 +103,26 @@ export function sub(v1: Vector, v2: Vector): Vector {
     float16array1[1]! -= float16array2[1]!
     float16array1[2]! -= float16array2[2]!
     return bigint64array1[0] as Vector
+}
+
+export function getBitFlagLE(buffer: Buffer, index: number){
+    return ((buffer[Math.floor(index / 8)]! >> (index % 8)) & 1) != 0
+}
+
+export function makeWanderPoint(point: Vector3, distance: number) {
+    return Vector3.Zero //TODO:
+}
+
+//const arraybuffer3 = new ArrayBuffer(4)
+//const float32array3 = new Float32Array(arraybuffer3)
+//const uint32array3 = new Uint32Array(arraybuffer3)
+//export function float32ToUInt32(value: number){
+//   float32array3[0] = value
+//   return uint32array3[0]!
+//}
+
+const buffer1 = Buffer.alloc(4)
+export function float32ToUInt32(value: number){
+    buffer1.writeFloatLE(value)
+    return buffer1.readUInt32LE()
 }
