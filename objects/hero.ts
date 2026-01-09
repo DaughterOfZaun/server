@@ -10,6 +10,8 @@ import { BuffComponent } from "../ecf/systems/buffs/component";
 import { StatsComponent } from "../ecf/systems/stats/component";
 import { MovementComponent } from "../ecf/systems/movement/component";
 import { Unit } from "../ecf/unit";
+import { SpellsComponent } from "../ecf/systems/spells/component";
+import { StatusComponent } from "../ecf/systems/status/component";
 
 class HeroStats extends StatsComponent {
     
@@ -20,23 +22,25 @@ class HeroStats extends StatsComponent {
 
     public override write() {
 
+        const hero = this.unit as Hero
+
         this.setPrimaryID(0)
         this.writeFloat(0, 0, this.exp)
         this.writeFloat(1, 0, this.gold)
-        //TODO: this.writeInt(2, this.unit.spells.enabled)
+        //TODO:this.writeUInt(2, hero.spells.enabled)
         this.writeUInt(3, 3) //TODO: Investigate.
-        //TODO: this.writeFloat(4, 0, this.unit.spells.get(0).cost)
-        //TODO: this.writeFloat(5, 0, this.unit.spells.get(1).cost)
-        //TODO: this.writeFloat(6, 0, this.unit.spells.get(2).cost)
-        //TODO: this.writeFloat(7, 0, this.unit.spells.get(3).cost)
+        //TODO: this.writeFloat(4, 0, hero.spells.q.cost)
+        //TODO: this.writeFloat(5, 0, hero.spells.w.cost)
+        //TODO: this.writeFloat(6, 0, hero.spells.e.cost)
+        //TODO: this.writeFloat(7, 0, hero.spells.r.cost)
 
         this.setPrimaryID(1)
-        // //TODO: this.writeUInt(0, this.unit.status.actionState)
-        // //TODO: this.writeBool(1, this.unit.isMagicImmune)
-        // //TODO: this.writeBool(2, this.unit.IsInvulnerable)
-        // //TODO: this.writeBool(3, this.unit.IsTargetable)
-        // //TODO: this.writeUInt(4, this.unit.IsTargetableToTeam)
-        // //TODO: this.writeUInt(5, this.unit.IsPhysicalImmune)
+        this.writeUInt(0, hero.status.actionState)
+        this.writeBool(1, hero.status.isMagicImmune)
+        this.writeBool(2, hero.status.isInvulnerable)
+        this.writeBool(3, hero.status.isTargetable)
+        this.writeUInt(4, hero.status.isTargetableToTeam)
+        this.writeBool(5, hero.status.isPhysicalImmune)
         this.writeFloat(6, 0, this.baseAttackDamage)
         this.writeFloat(7, 0, this.baseAbilityDamage)
         this.writeFloat(8, 2, this.dodge)
@@ -62,9 +66,9 @@ class HeroStats extends StatsComponent {
         this.writeFloat(27, 2, this.percentLifeStealMod)
         this.writeFloat(28, 2, this.percentSpellVampMod)
 
-        this.setPrimaryID(2)
-        //TODO: this.writeBool(0, this.unit.isMagicImmune)
-        //TODO: this.writeBool(1, this.unit.isInvulnerable)
+        //TODO: this.setPrimaryID(2)
+        //TODO: this.writeBool(0, hero.isMagicImmune)
+        //TODO: this.writeBool(1, hero.isInvulnerable)
 
         this.setPrimaryID(3)
         this.writeFloat(0, 0, this.health)
@@ -77,7 +81,7 @@ class HeroStats extends StatsComponent {
         this.writeFloat(7, 2, this.scaleSkinCoef)
         this.writeUInt(8, this.level)
         this.writeUInt(9, this.minionsKilled)
-        // //AB: this.writeFloat(9, 2, this.unit.collision.radius)
+        // //AB: this.writeFloat(9, 2, hero.collision.radius)
         // //AB: this.writeUInt(10, this.minionsKilled)
     }
 }
@@ -93,6 +97,8 @@ export class Hero extends Unit {
     override buffs: BuffComponent = new BuffComponent(this)
     override stats: HeroStats = new HeroStats(this)
     override movement: MovementComponent = new MovementComponent(this)
+    override spells: SpellsComponent = new SpellsComponent(this)
+    override status: StatusComponent = new StatusComponent(this)
 
     public spawn(spawnPosIndex: number){
         

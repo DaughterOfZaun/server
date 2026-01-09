@@ -5,7 +5,9 @@ import type { AIComponent } from "./systems/ai/component";
 import type { BuffComponent } from "./systems/buffs/component";
 import type { DataComponent } from "./systems/data/component";
 import type { MovementComponent } from "./systems/movement/component";
+import type { SpellsComponent } from "./systems/spells/component";
 import type { StatsComponent } from "./systems/stats/component";
+import type { StatusComponent } from "./systems/status/component";
 
 export class Unit {
 
@@ -19,6 +21,8 @@ export class Unit {
     buffs?: BuffComponent
     stats?: StatsComponent
     movement?: MovementComponent
+    spells?: SpellsComponent
+    status?: StatusComponent
 
     public reset(){}
     public from(unit: Unit){}

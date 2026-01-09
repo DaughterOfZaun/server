@@ -272,13 +272,13 @@ export enum PayloadType {
 }
 
 export enum Teams {
+    Unknown = 0,
     Unassigned = 99,
     Order = 100,
     Chaos = 200,
 }
 
-export enum NetNodeID
-{
+export enum NetNodeID {
     Spawned = 0x40,
     Map = 0xFF,
 }
@@ -298,60 +298,80 @@ export abstract class BasePacket {
     }
 
     public read(bufferOrReader: Buffer | Reader): this {
-        if(!(this instanceof World_SendCamera_Server))
-        console.log('read', this.constructor.name, bufferOrReader)
-        //console.log('buffer', buffer)
+    
+        if(!(this instanceof World_SendCamera_Server)){
+            console.log('read', this.constructor.name)
+            if(Buffer.isBuffer(bufferOrReader))
+                console.log('source', bufferOrReader.toHex())
+        }
 
         const reader =
             bufferOrReader instanceof Reader ?
                 bufferOrReader :
                 new Reader(bufferOrReader, 'LE')
         
-        if(this instanceof DefaultPayload) //HACK:
-            DefaultPayload.prototype._read.call(this, reader)
-        if(this instanceof GamePacket) //HACK:
-            GamePacket.prototype._read.call(this, reader)
-        if(this instanceof MovementData) //HACK:
-            MovementData.prototype._read.call(this, reader)
-        this._read(reader)
+        reverseCall(this, this._read.name, reader)
 
-        if(!(this instanceof World_SendCamera_Server))
-        console.log('result', this)
+        if(!(this instanceof World_SendCamera_Server)){
+            console.log('result', this.stringify())
+        }
         
         return this
     }
 
     public write(writer?: Writer): Buffer {
-        if(!(this instanceof World_SendCamera_Server_Acknologment))
-        console.log('write', this.constructor.name)
-        
-        // let size = this._size()
-        // if(this instanceof DefaultPayload) //HACK:
-        //     size += DefaultPayload.prototype._size.call(this)
-        // if(this instanceof GamePacket) //HACK:
-        //     size += GamePacket.prototype._size.call(this)
-        //const buffer = Buffer.alloc(size)
+
+        if(!(this instanceof World_SendCamera_Server_Acknologment)){
+            console.log('write', this.constructor.name)
+            console.log('source', this.stringify())
+        }
 
         writer ??= new Writer(buffer, 'LE')
-        if(this instanceof DefaultPayload) //HACK:
-            DefaultPayload.prototype._write.call(this, writer)
-        if(this instanceof GamePacket) //HACK:
-            GamePacket.prototype._write.call(this, writer)
-        if(this instanceof MovementData) //HACK:
-            MovementData.prototype._write.call(this, writer)
-        this._write(writer)
+        
+        reverseCall(this, this._write.name, writer)
 
         const result =  buffer.subarray(0, writer.position)
 
-        if(!(this instanceof World_SendCamera_Server_Acknologment))
-        console.log('result', result)
+        if(!(this instanceof World_SendCamera_Server_Acknologment)){
+            console.log('result', result.toHex())
+        }
         
         return result
+    }
+
+    stringify(){
+        return JSON.stringify(this, (k, v) => {
+            if(typeof v == 'bigint'){
+                if(v > 0xFFFF) return toString(v as Vector3)
+                else return v.toString() + 'n'
+            }
+            if(v instanceof Map)
+                return Object.fromEntries(v.entries())
+            if(v instanceof Set)
+                return [...v]
+            return v
+        }, 4)
     }
 
     //constructor(obj?: any){
     //    Object.assign(this, obj)
     //}
+}
+
+function reverseCall(obj: any, key: string, ...args: any[]): void {
+    const protos = []
+    let proto = obj
+    while(true){
+        proto = Object.getPrototypeOf(proto)
+        if(proto == BasePacket.prototype) break
+        if(Object.hasOwn(proto, key))
+            protos.push(proto)
+    }
+    protos.reverse()
+    for(const proto of protos){
+        //console.log('calling', key, 'on', proto)
+        proto[key].call(obj, ...args)
+    }
 }
 
 export abstract class GamePacket extends BasePacket {
@@ -456,7 +476,7 @@ export class RequestReskin extends DefaultPayload {
         this.playerId = reader.readUInt64("playerId")
         this.skinID = reader.readUInt32("skinID")
         const bufferLen = reader.readUInt32("bufferLen")
-        this.buffer = reader.readCString(bufferLen)
+        this.buffer = reader.readFixedString(bufferLen)
     }
     public override _write(writer: Writer): void {
         writer.writeUInt32(0)
@@ -464,7 +484,8 @@ export class RequestReskin extends DefaultPayload {
         writer.writeUInt32(this.skinID)
         const bufferLen = this.buffer.length + 1
         writer.writeUInt32(bufferLen)
-        writer.writeCString(bufferLen, this.buffer)
+        writer.writeFixedString(bufferLen, this.buffer)
+        //writer.writeByte(0)
     }
 }
 
@@ -1075,7 +1096,6 @@ export class MovementDataNormal extends MovementData {
 
             let lastX = reader.readInt16("lastX")
             let lastZ = reader.readInt16("lastZ")
-            console.log('waypoint', 0, lastX, lastZ)
             this.waypoints.push(vec2(lastX, lastZ))
             
             for(let i = 1, flag = 0; i < size; i++){
@@ -1089,7 +1109,6 @@ export class MovementDataNormal extends MovementData {
                 } else {
                     lastZ = reader.readInt16("lastZ")
                 }
-                console.log('waypoint', i, lastX, lastZ)
                 this.waypoints.push(vec2(lastX, lastZ))
             }
         }
@@ -1109,7 +1128,6 @@ export class MovementDataNormal extends MovementData {
             const count = Math.floor((size - 2) / 4 + 1)
             writer.writePad(count)
             for(const waypoint of this.waypoints){
-                console.log('waypoint', waypoint, toString(waypoint))
                 writer.writeInt16(getX(waypoint))
                 writer.writeInt16(getZ(waypoint))
             }
@@ -1548,8 +1566,8 @@ export class S2C_CreateHero extends GamePacket {
         writer.writeByte(this.botRank)
         writer.writeByte(this.spawnPosIndex)
         writer.writeUInt32(this.skinID)
-        writer.writeCString(40, this.name)
-        writer.writeCString(40, this.skin)
+        writer.writeFixedString(40, this.name)
+        writer.writeFixedString(40, this.skin)
     }
 }
 export class SyncSimTimeFinalS2C extends GamePacket {
@@ -1646,7 +1664,7 @@ export class SynchVersionC2S extends GamePacket {
     public override _read(reader: Reader){
         this.time_LastClient = reader.readFloat("time_LastClient")
         this.clientNetID = reader.readUInt32("clientNetID")
-        this.versionString = reader.readCString(256)
+        this.versionString = reader.readFixedString(256)
     }
 }
 
@@ -1820,8 +1838,8 @@ export class SynchVersionS2C extends GamePacket {
         for(let i = 0; i < 12; i++){
             this.playerInfo[i] = new PlayerLiteInfo().read(reader)
         }
-        this.versionString = reader.readCString(256)
-        this.mapMode = reader.readCString(128)
+        this.versionString = reader.readFixedString(256)
+        this.mapMode = reader.readFixedString(128)
     }
     public override _write(writer: Writer){
         writer.writeBool(this.isVersionOk)
@@ -1834,8 +1852,8 @@ export class SynchVersionS2C extends GamePacket {
         for(; i < 12; i++){
             PlayerLiteInfo.empty.write(writer)
         }
-        writer.writeCString(256, this.versionString)
-        writer.writeCString(128, this.mapMode)
+        writer.writeFixedString(256, this.versionString)
+        writer.writeFixedString(128, this.mapMode)
     }
 }
 
@@ -1854,7 +1872,7 @@ export class PlayerLiteInfo extends BasePacket {
     // int botDifficulty;
     // int profileIconId;
 
-    playerId: bigint = 0n
+    playerId: bigint = 0xFFFFFFFFFFFFFFFFn //HACK: -1
     summonerLevel: number = 0
     summonerSpell1: number = 0
     summonerSpell2: number = 0
@@ -1881,8 +1899,8 @@ export class PlayerLiteInfo extends BasePacket {
         writer.writeUInt32(this.teamId)
         //writer.writeBytes(Buffer.from(this.botName + '\u0000', 'utf8'))
         //writer.writeBytes(Buffer.from(this.botSkinName + '\u0000', 'utf8'))
-        writer.writeCString(28, this.botName)
-        writer.writeCString(28, this.botSkinName)
+        writer.writeFixedString(28, this.botName)
+        writer.writeFixedString(28, this.botSkinName)
         writer.writeUInt32(this.botDifficulty)
         writer.writeUInt32(this.profileIconId)
     }
@@ -1893,8 +1911,8 @@ export class PlayerLiteInfo extends BasePacket {
         this.summonerSpell2 = reader.readUInt32("summonerSpell2")
         this.isBot = reader.readBool("isBot")
         this.teamId = reader.readUInt32("teamId")
-        this.botName = reader.readCString(28)
-        this.botSkinName = reader.readCString(28)
+        this.botName = reader.readFixedString(28)
+        this.botSkinName = reader.readFixedString(28)
         this.botDifficulty = reader.readUInt32("botDifficulty")
         this.profileIconId = reader.readUInt32("profileIconId")
     }

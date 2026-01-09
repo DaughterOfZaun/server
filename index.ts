@@ -1,8 +1,9 @@
 import { decrypt, encrypt } from "./net/blowfish"
 import { Peer, type WrappedPacket } from "./net/peer"
-import { ENetChannels, type BasePacket } from "./net/pkt"
+import { ENetChannels, Teams, type BasePacket } from "./net/pkt"
 import { World } from "./ecf/world"
 import * as PKT from './net/pkt'
+import { config } from "./config"
 
 export function assign<T extends {}>(target: T, source: Partial<T>): T {
     return Object.assign(target, source)
@@ -60,8 +61,13 @@ export function send<T extends BasePacket>(packet: T, obj?: Partial<T>, channelI
 }
 
 const world = new World()
+const startTime = Date.now()
 
 function *processPacket(): Generator<void, void, WrappedPacket> {
+
+    const player = config.players[0]!
+    const orderPlayers = config.players.filter(player => player.teamID == Teams.Order)
+    const chaosPlayers = config.players.filter(player => player.teamID == Teams.Chaos)
 
     {
         const { channelID, data } = yield
@@ -91,24 +97,24 @@ function *processPacket(): Generator<void, void, WrappedPacket> {
         const packet = new PKT.SynchVersionC2S().read(data)
 
         send(new PKT.SynchVersionS2C(), {
-            isVersionOk: true,
-            mapToLoad: 30,
-            playerInfo: [
-                assign(new PKT.PlayerLiteInfo(), {
-                    playerId: 1n,
-                    summonerLevel: 30,
-                    summonerSpell1: 0x03657421,
-                    summonerSpell2: 0x065E8695,
-                    isBot: false,
-                    teamId: 100,
-                    botName: '',
-                    botSkinName: '',
-                    botDifficulty: 0,
-                    profileIconId: 0,
-                }),
-            ],
             versionString: "1.0.0.126",
-            mapMode: "CLASSIC",
+            isVersionOk: true,
+            mapToLoad: config.mapToLoad,
+            mapMode: config.mapMode,
+            playerInfo: config.players.map(config => {
+                return assign(new PKT.PlayerLiteInfo(), {
+                    playerId: config.playerId,
+                    summonerLevel: config.summonerLevel,
+                    summonerSpell1: 0x03657421, //TODO:
+                    summonerSpell2: 0x065E8695, //TODO:
+                    isBot: config.isBot,
+                    teamId: config.teamID,
+                    botName: config.botName,
+                    botSkinName: config.botSkinName,
+                    botDifficulty: config.botDifficulty,
+                    profileIconId: config.profileIconId,
+                })
+            }),
         })
     }
 
@@ -128,40 +134,51 @@ function *processPacket(): Generator<void, void, WrappedPacket> {
         send(new PKT.TeamRosterUpdate(), {
             teamsize_order: 6,
             teamsize_chaos: 6,
-            orderMembers: [ 1n ],
-            chaosMembers: [    ],
-            current_teamsize_order: 1,
-            current_teamsize_chaos: 0,
+            orderMembers: orderPlayers.map(player => player.playerId),
+            chaosMembers: chaosPlayers.map(player => player.playerId),
+            current_teamsize_order: orderPlayers.length,
+            current_teamsize_chaos: chaosPlayers.length,
         })
 
         send(new PKT.RequestRename(), {
-            playerId: 1n,
-            skinID: 0,
-            buffer: 'Sylanata',
+            playerId: player.playerId,
+            skinID: player.skinID,
+            buffer: player.name,
         })
  
         send(new PKT.RequestReskin(), {
-            playerId: 1n,
-            skinID: 0,
-            buffer: 'Jax',
+            playerId: player.playerId,
+            skinID: player.skinID,
+            buffer: player.skin,
         })
         
-        //send(new PKT.RegistryPacket(), {
-        //    playerID: 1n,
-        //})
+        send(new PKT.RegistryPacket(), {
+          playerID: player.playerId,
+        }, ENetChannels.DEFAULT)
+    }
+    
+    {
+        send(new PKT.SynchSimTimeS2C(), {
+            synchtime: (Date.now() - startTime) / 1000
+        })
     }
 
     while(true){
         let { channelID, data } = yield; data = decrypt(data)
 
+        if(data[0] == PKT.Type.SynchSimTimeC2S){
+            //TODO: Send SynchSimTimeS2C.
+            //TODO: Send SyncSimTimeFinalS2C.
+        }
+        else
         if(data[0] == PKT.Type.C2S_Ping_Load_Info){
 
             const packet = new PKT.C2S_Ping_Load_Info().read(data)
             //console.log(packet)
 
             send(new PKT.S2C_Ping_Load_Info(), {
-                clientID: 0,
-                playerID: 1n,
+                clientID: player.clientID,
+                playerID: player.playerId,
                 percentage: packet.percentage,
                 ETA: packet.ETA,
                 count: packet.count,
@@ -173,8 +190,8 @@ function *processPacket(): Generator<void, void, WrappedPacket> {
         if(data[0] == PKT.Type.C2S_CharSelected){
 
             send(new PKT.S2C_StartSpawn(), {
-                numBotsOrder: 0,
-                numBotsChaos: 0,
+                numBotsOrder: orderPlayers.filter(player => player.isBot).length,
+                numBotsChaos: chaosPlayers.filter(player => player.isBot).length,
             })
 
             world.spawn()
@@ -184,10 +201,6 @@ function *processPacket(): Generator<void, void, WrappedPacket> {
         else
         if(data[0] == PKT.Type.C2S_ClientReady){
 
-            send(new PKT.SynchSimTimeS2C(), {
-                synchtime: 0
-            })
-
             send(new PKT.S2C_StartGame(), {
                 tournamentPauseEnabled: false,
             })
@@ -196,11 +209,12 @@ function *processPacket(): Generator<void, void, WrappedPacket> {
         }
         else
         if(data[0] == PKT.Type.SendSelectedObjID){
-
+        
+            // Ignore.
+        
         }
         else {
-            console.log('received', channelID, data)
-            console.assert(false)
+            console.assert(false, 'unexpected', PKT.Type[data[0]!], channelID, data)
         }
     }
 
