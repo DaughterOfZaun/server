@@ -1,4 +1,4 @@
-import { send } from "../../..";
+import { client } from "../../../net/client";
 import { Vector3, type Vector2 } from "../../../math";
 import type { BuffType } from "../buffs/shared";
 import { AIState, LostReason, Orders, StopReason } from "./shared";
@@ -56,7 +56,7 @@ export class AIComponent extends Component {
     protected getState(){ return this.state }
     protected setState(state: AIState){ this.state = state }
     protected netSetState(state: AIState){
-        send(new PKT.S2C_AI_State(), { stateID: state })
+        client.send(new PKT.S2C_AI_State(), { stateID: state })
         this.setState(state)
     }
 

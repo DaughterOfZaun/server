@@ -3,7 +3,7 @@ import path from 'node:path'
 import { CharacterData } from './ecf/systems/data/data'
 import { RFile } from './r-file'
 import { INIReader } from './ini-reader'
-import { replacer } from './math'
+import { replacer } from './utils'
 
 const paths = function(){
     const client = path.join('..', 'playable_client_126')
@@ -19,12 +19,16 @@ const paths = function(){
     return { buffs, characters, globals, items, particles, spells, talents, cache }
 }()
 
-let cache = new class CachedData {
+export let cache = new class CachedData {
     characters: Record<string, CharacterData> = {}
 }
 
 export class Cache {
-    public static async load(){
+    public static async init(){
+        const cache = new Cache()
+        await cache.init()
+    }
+    private async init(){
         try {
             cache = JSON.parse(await fs.readFile(paths.cache, 'utf8'))
             return

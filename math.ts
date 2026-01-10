@@ -209,25 +209,3 @@ export function toObject(v: Vector){
         w: float16array1[3]!,
     }
 }
-
-export function optchain<T, R>(value: T | undefined, callback: (value: T) => R): R | undefined {
-    if(value == undefined || value == null) return undefined
-    return callback(value)
-}
-
-//TODO: replacer + reviver
-export function replacer(key: string, value: unknown){
-    if(typeof value == 'bigint'){
-        if(value > 0xFFFF) return toObject(value as Vector3)
-        else return { n: value.toString(16) }
-    }
-    if(value instanceof Map){
-        const obj = Object.fromEntries(value.entries())
-        obj['$type'] = 'map'
-        return obj
-    }
-    if(value instanceof Set){
-        return [...value]
-    }
-    return value
-}

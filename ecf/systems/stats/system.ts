@@ -2,7 +2,8 @@ import type { ReplicationData } from "../../../net/pkt";
 import type { Frame } from "../../frame";
 import { System } from "../../system";
 import * as PKT from '../../../net/pkt'
-import { assign, send } from "../../..";
+import { assign } from "../../../utils";
+import { client } from "../../../net/client";
 
 export class StatsSystem extends System {
     syncID = 1
@@ -24,7 +25,7 @@ export class StatsSystem extends System {
             }
         }
         if(datas.length > 0)
-        send(new PKT.OnReplication(), {
+        client.send(new PKT.OnReplication(), {
             syncID: Date.now() & 0x7FFFFFFF,
             datas,
         })

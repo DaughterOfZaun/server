@@ -1,4 +1,5 @@
 import { Component } from "../../component";
+import type { CharacterData } from "../data/data";
 
 export class Spell {
     cost: number = 0
@@ -24,4 +25,8 @@ export class SpellsComponent extends Component {
     get d(){ return this.get(4)! }
     get f(){ return this.get(5)! }
     get b(){ return this.get(6)! }
+
+    load(data: CharacterData) {
+        throw new Error("Method not implemented.");
+    }
 }

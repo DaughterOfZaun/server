@@ -5,7 +5,7 @@ export const config = {
     mapMode: "CLASSIC",
     players: [
         {
-            playerId: 1n,
+            playerId: 1,
             summonerLevel: 30,
             teamID: Teams.Order,
             isBot: false,

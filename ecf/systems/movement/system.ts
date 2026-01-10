@@ -1,4 +1,5 @@
-import { assign, send } from "../../..";
+import { client } from "../../../net/client";
+import { assign } from "../../../utils";
 import type { Frame } from "../../frame";
 import { System } from "../../system";
 import * as PKT from '../../../net/pkt'
@@ -26,7 +27,7 @@ export class MovementSystem extends System {
         }
         if(waypointGroupRequiresNotification){
             waypointGroupRequiresNotification = false
-            send(new PKT.WaypointGroup(), {
+            client.send(new PKT.WaypointGroup(), {
                 syncID: Date.now() & 0x7FFFFFFF,
                 movements,
             })

@@ -1,5 +1,6 @@
 import type { INIReader } from "../../../ini-reader";
-import { optchain, toArray, type Vector4 } from "../../../math";
+import { toArray, type Vector4 } from "../../../math";
+import { optcall } from "../../../utils";
 
 // The real values are unknown to me.
 enum SearchTags {
@@ -292,7 +293,7 @@ export class CharacterData {
         this.levelSpellEffectiveness = reader.readFloat(`LevelSpellEffectiveness`)
         this.lore = reader.readString(`Lore${1}`)
         this.magicRank = reader.readInt(`MagicRank`)
-        this.maxLevels = optchain(reader.readVector4i(`MaxLevels`), v => toArray(v))
+        this.maxLevels = optcall(reader.readVector4i(`MaxLevels`), toArray)
         this.moveSpeed = reader.readFloat(`MoveSpeed`)
         this.mpPerLevel = reader.readFloat(`MPPerLevel`)
         this.mpRegenPerLevel = reader.readFloat(`MPRegenPerLevel`)

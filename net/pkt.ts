@@ -1,6 +1,7 @@
-import { getBitFlagLE, getX, getZ, replacer, toString, vec2, Vector2, Vector3 } from "../math";
+import { getBitFlagLE, getX, getZ, vec2, Vector2, Vector3 } from "../math";
 import type { AIState, Orders } from "../ecf/systems/ai/shared";
 import { Reader, Writer } from "./enet";
+import { replacer } from "../utils";
 
 export enum ENetChannels {
     DEFAULT = 0,

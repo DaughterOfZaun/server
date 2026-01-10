@@ -1,9 +1,13 @@
 import { float32ToUInt32 } from "../../../math";
 import { Component } from "../../component";
+import type { CharacterData } from "../data/data";
 
 export abstract class StatsComponent extends Component {
 
+    level: number = 1
+
     baseAttackDamage: number = 0
+    attackDamagePerLevel: number = 0
     totalAttackDamage: number = 0
     flatPhysicalDamageMod: number = 0
     permanentFlatPhysicalDamageMod: number = 0
@@ -11,6 +15,8 @@ export abstract class StatsComponent extends Component {
     permanentPercentPhysicalDamageMod: number = 0
     
     dodge: number = 0
+    baseDodge: number = 0
+    dodgePerLevel: number = 0
     flatDodgeMod: number = 0
     flatMissChanceMod: number = 0
     
@@ -26,11 +32,16 @@ export abstract class StatsComponent extends Component {
     acquisitionRangeMod: number = 0
     
     crit: number = 0
+    baseCritChance: number = 0
+    critChancePerLevel: number = 0
     flatCritChanceMod: number = 0
     permanentFlatCritChanceMod: number = 0
     flatCritDamageMod: number = 0
+    critDamageMultiplier: number = 0
     
     health: number = 0
+    baseHealth: number = 0
+    healthPerLevel: number = 0
     healthPercent: number = 0
     
     maxHealth: number = 0
@@ -45,6 +56,8 @@ export abstract class StatsComponent extends Component {
     permanentPercentHPRegenMod: number = 0
     
     par: number = 0
+    basePAR: number = 0
+    parPerLevel: number = 0
     parPercent: number = 0
 
     maxPAR: number = 0
@@ -58,11 +71,13 @@ export abstract class StatsComponent extends Component {
     percentPARRegenMod: number = 0
 
     baseAbilityDamage: number = 0
+    magicDamagePerLevel: number = 0
     flatMagicDamageMod: number = 0
     permanentFlatMagicDamageMod: number = 0
     percentMagicDamageMod: number = 0
     
     movementSpeed: number = 0
+    baseMoveSpeed: number = 0
     flatMovementSpeedMod: number = 0
     permanentFlatMovementSpeedMod: number = 0
     percentMovementSpeedMod: number = 0
@@ -70,6 +85,9 @@ export abstract class StatsComponent extends Component {
     percentMultiplicativeMovementSpeedMod: number = 0
     moveSpeedFloorMod: number = 0
     
+    attackSpeed: number = 0
+    baseAttackSpeed: number = 0
+    attackSpeedPerLevel: number = 0
     attackSpeedMod: number = 0
     percentAttackSpeedMod: number = 0
     permanentPercentAttackSpeedMod: number = 0
@@ -84,7 +102,14 @@ export abstract class StatsComponent extends Component {
     
     percentRespawnTimeMod: number = 0
     
-    armor: number = 0
+    get armor(){
+        return (
+            this.baseArmor + this.armorPerLevel * this.level + 
+            this.flatArmorMod + this.permanentFlatArmorMod
+        ) * (1 + this.percentArmorMod)
+    }
+    baseArmor: number = 0
+    armorPerLevel: number = 0
     flatArmorMod: number = 0
     permanentFlatArmorMod: number = 0
     percentArmorMod: number = 0
@@ -97,6 +122,8 @@ export abstract class StatsComponent extends Component {
     percentPhysicalReduction: number = 0
 
     spellBlock: number = 0
+    baseSpellBlock: number = 0
+    spellBlockPerLevel: number = 0
     flatSpellBlockMod: number = 0
     permanentFlatSpellBlockMod: number = 0
     percentSpellBlockMod: number = 0
@@ -178,34 +205,48 @@ export abstract class StatsComponent extends Component {
         }
     }
 
-    //stats.armorBase = armor
-    //stats.armorBasePerLevel = armorPerLevel
-    //stats.spellBlockBase = spellBlock
-    //stats.spellBlockBasePerLevel = spellBlockPerLevel
-    //stats.dodgeBase = baseDodge
-    //stats.dodgeBasePerLevel = levelDodge
-    //stats.attackSpeedBase = attackSpeed
-    //stats.attackSpeedBasePerLevel = attackSpeedPerLevel
-    //stats.attackDamageBase = baseDamage
-    //stats.attackDamageBasePerLevel = damagePerLevel
-    //stats.critChanceBase = baseCritChance
-    //stats.critChanceBasePerLevel = critPerLevel
-    //stats.critDamageBonus = critDamageBonus
-    //stats.magicDamageBase = baseAbilityPower
-    //stats.magicDamageBasePerLevel = abilityPowerIncPerLevel
-    //stats.healthBase = baseHp
-    //stats.healthBasePerLevel = hpPerLevel
-    //stats.healthRegenBase = baseStaticHpRegen
-    //stats.healthRegenBasePerLevel = hpRegenPerLevel
-    //stats.manaBase = baseMp
-    //stats.manaBasePerLevel = mpPerLevel
-    //stats.manaRegenBase = baseStaticMpRegen
-    //stats.manaRegenBasePerLevel = mpRegenPerLevel
-    //stats.movementSpeedBase = moveSpeed
+    load(data: CharacterData) {
 
-    //TODO?: WTF is that?
-    //stats.baseSpellEffectiveness = baseSpellEffectiveness
-    //stats.levelSpellEffectiveness = levelSpellEffectiveness
-    //stats.baseFactorHpRegen = baseFactorHpRegen
-    //stats.baseFactorMpRegen = baseFactorMpRegen
+        this.baseArmor = data.armor!
+        this.armorPerLevel = data.armorPerLevel!
+
+        this.baseSpellBlock = data.spellBlock!
+        this.spellBlockPerLevel = data.spellBlockPerLevel!
+
+        this.baseDodge = data.baseDodge!
+        this.dodgePerLevel = data.levelDodge!
+
+        this.baseAttackSpeed = data.attackSpeed!
+        this.attackSpeedPerLevel = data.attackSpeedPerLevel!
+
+        this.baseAttackDamage = data.baseDamage!
+        this.attackDamagePerLevel = data.damagePerLevel!
+
+        this.baseCritChance = data.baseCritChance!
+        this.critChancePerLevel = data.critPerLevel!
+        this.critDamageMultiplier = data.critDamageBonus!
+
+        this.baseAbilityDamage = data.baseAbilityPower!
+        this.magicDamagePerLevel = data.abilityPowerIncPerLevel!
+        
+        this.baseHealth = data.baseHp!
+        this.healthPerLevel = data.hpPerLevel!
+
+        //TODO: this.healthRegen = data.staticHpRegen!
+        //TODO: this.healthRegenPerLevel = data.hpRegenPerLevel!
+        
+        this.basePAR = data.baseMp!
+        this.parPerLevel = data.mpPerLevel!
+
+        //TODO: this.manaRegen = data.staticMpRegen!
+        //TODO: this.manaRegenPerLevel = data.mpRegenPerLevel!
+        
+        this.baseMoveSpeed = data.moveSpeed!
+        
+        //TODO: this.spellEffectiveness = data.spellEffectiveness!
+        //TODO: this.levelSpellEffectiveness = data.levelSpellEffectiveness!
+
+        //TODO: this.factorHpRegen = data.factorHpRegen!
+        //TODO: this.factorMpRegen = data.factorMpRegen!
+    }
 }
