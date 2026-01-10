@@ -11,7 +11,7 @@ const bigint64array2 = new BigUint64Array(arraybuffer2)
 export type Vector2 = bigint & { readonly brand: unique symbol }
 export type Vector3 = bigint & { readonly brand: unique symbol }
 export type Vector4 = bigint & { readonly brand: unique symbol }
-type Vector = Vector2 | Vector3 | Vector4
+export type Vector = Vector2 | Vector3 | Vector4
 
 export namespace Vector4 {
     export function read(reader: Reader, name?: string){
@@ -21,11 +21,11 @@ export namespace Vector4 {
         float16array1[3] = reader.readFloat(`${name}.w`)
         return bigint64array1[0] as Vector4
     }
-    export function readFixed(reader: Reader, name?: string){
-        float16array1[0] = reader.readSByte(`${name}.x`) * 0.1
-        float16array1[2] = reader.readSByte(`${name}.y`) * 0.1
-        float16array1[1] = reader.readSByte(`${name}.z`) * 0.1
-        float16array1[3] = reader.readSByte(`${name}.w`) * 0.1
+    export function readFixed(reader: Reader, scale = 1, name?: string){
+        float16array1[0] = reader.readSByte(`${name}.x`) * scale
+        float16array1[2] = reader.readSByte(`${name}.y`) * scale
+        float16array1[1] = reader.readSByte(`${name}.z`) * scale
+        float16array1[3] = reader.readSByte(`${name}.w`) * scale
         return bigint64array1[0] as Vector4
     }
 }
@@ -46,10 +46,10 @@ export namespace Vector3 {
         float16array1[3] = 0
         return bigint64array1[0] as Vector3
     }
-    export function readFixed(reader: Reader, name?: string){
-        float16array1[0] = reader.readSByte(`${name}.x`) * 0.1
-        float16array1[2] = reader.readSByte(`${name}.y`) * 0.1
-        float16array1[1] = reader.readSByte(`${name}.z`) * 0.1
+    export function readFixed(reader: Reader, scale = 1, name?: string){
+        float16array1[0] = reader.readSByte(`${name}.x`) * scale
+        float16array1[2] = reader.readSByte(`${name}.y`) * scale
+        float16array1[1] = reader.readSByte(`${name}.z`) * scale
         float16array1[3] = 0
         return bigint64array1[0] as Vector3
     }
@@ -70,10 +70,10 @@ export namespace Vector2 {
         float16array1[3] = 0
         return bigint64array1[0] as Vector2
     }
-    export function readFixed(reader: Reader, name?: string){
-        float16array1[0] = reader.readSByte(`${name}.x`) * 0.1
+    export function readFixed(reader: Reader, scale = 1, name?: string){
+        float16array1[0] = reader.readSByte(`${name}.x`) * scale
         float16array1[2] = 0
-        float16array1[1] = reader.readSByte(`${name}.z`) * 0.1
+        float16array1[1] = reader.readSByte(`${name}.z`) * scale
         float16array1[3] = 0
         return bigint64array1[0] as Vector2
     }
@@ -108,22 +108,22 @@ export function toString(v: Vector){
     return `${float16array1[0]}, ${float16array1[2]}, ${float16array1[1]}, ${float16array1[3]}`
 }
 
-export function getX(v: Vector){
+export function getX(v: Vector2 | Vector3 | Vector4){
     bigint64array1[0] = v
     return float16array1[0]!
 }
 
-export function getY(v: Vector){
+export function getY(v: Vector3 | Vector4){
     bigint64array1[2] = v
     return float16array1[2]!
 }
 
-export function getZ(v: Vector){
+export function getZ(v: Vector2 | Vector3 | Vector4){
     bigint64array1[1] = v
     return float16array1[1]!
 }
 
-export function getW(v: Vector){
+export function getW(v: Vector4){
     bigint64array1[1] = v
     return float16array1[3]!
 }
@@ -156,6 +156,18 @@ export function sub(v1: Vector, v2: Vector): Vector {
     return bigint64array1[0] as Vector
 }
 
+export function div(v: Vector2, s: number): Vector2
+export function div(v: Vector3, s: number): Vector3
+export function div(v: Vector4, s: number): Vector4
+export function div(v: Vector, s: number): Vector {
+    bigint64array1[0] = v
+    float16array1[0]! /= s
+    float16array1[1]! /= s
+    float16array1[2]! /= s
+    float16array1[3]! /= s
+    return bigint64array1[0] as Vector
+}
+
 export function getBitFlagLE(buffer: Buffer, index: number){
     return ((buffer[Math.floor(index / 8)]! >> (index % 8)) & 1) != 0
 }
@@ -177,3 +189,45 @@ export function float32ToUInt32(value: number){
 //    buffer1.writeFloatLE(value)
 //    return buffer1.readUInt32LE()
 //}
+
+export function toArray(v: Vector){
+    bigint64array1[0] = v
+    return [
+        float16array1[0]!,
+        float16array1[2]!,
+        float16array1[1]!,
+        float16array1[3]!,
+    ]
+}
+
+export function toObject(v: Vector){
+    bigint64array1[0] = v
+    return {
+        x: float16array1[0]!,
+        y: float16array1[2]!,
+        z: float16array1[1]!,
+        w: float16array1[3]!,
+    }
+}
+
+export function optchain<T, R>(value: T | undefined, callback: (value: T) => R): R | undefined {
+    if(value == undefined || value == null) return undefined
+    return callback(value)
+}
+
+//TODO: replacer + reviver
+export function replacer(key: string, value: unknown){
+    if(typeof value == 'bigint'){
+        if(value > 0xFFFF) return toObject(value as Vector3)
+        else return { n: value.toString(16) }
+    }
+    if(value instanceof Map){
+        const obj = Object.fromEntries(value.entries())
+        obj['$type'] = 'map'
+        return obj
+    }
+    if(value instanceof Set){
+        return [...value]
+    }
+    return value
+}

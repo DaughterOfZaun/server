@@ -1,4 +1,4 @@
-import { getBitFlagLE, getX, getZ, toString, vec2, Vector2, Vector3 } from "../math";
+import { getBitFlagLE, getX, getZ, replacer, toString, vec2, Vector2, Vector3 } from "../math";
 import type { AIState, Orders } from "../ecf/systems/ai/shared";
 import { Reader, Writer } from "./enet";
 
@@ -299,11 +299,11 @@ export abstract class BasePacket {
 
     public read(bufferOrReader: Buffer | Reader): this {
     
-        if(!(this instanceof World_SendCamera_Server)){
-            console.log('read', this.constructor.name)
-            if(Buffer.isBuffer(bufferOrReader))
-                console.log('source', bufferOrReader.toHex())
-        }
+        //if(!(this instanceof World_SendCamera_Server)){
+        //    console.log('read', this.constructor.name)
+        //    if(Buffer.isBuffer(bufferOrReader))
+        //        console.log('source', bufferOrReader.toHex())
+        //}
 
         const reader =
             bufferOrReader instanceof Reader ?
@@ -312,19 +312,19 @@ export abstract class BasePacket {
         
         reverseCall(this, this._read.name, reader)
 
-        if(!(this instanceof World_SendCamera_Server)){
-            console.log('result', this.stringify())
-        }
+        //if(!(this instanceof World_SendCamera_Server)){
+        //    console.log('result', this.stringify())
+        //}
         
         return this
     }
 
     public write(writer?: Writer): Buffer {
 
-        if(!(this instanceof World_SendCamera_Server_Acknologment)){
-            console.log('write', this.constructor.name)
-            console.log('source', this.stringify())
-        }
+        //if(!(this instanceof World_SendCamera_Server_Acknologment)){
+        //    console.log('write', this.constructor.name)
+        //    console.log('source', this.stringify())
+        //}
 
         writer ??= new Writer(buffer, 'LE')
         
@@ -332,25 +332,15 @@ export abstract class BasePacket {
 
         const result =  buffer.subarray(0, writer.position)
 
-        if(!(this instanceof World_SendCamera_Server_Acknologment)){
-            console.log('result', result.toHex())
-        }
+        //if(!(this instanceof World_SendCamera_Server_Acknologment)){
+        //    console.log('result', result.toHex())
+        //}
         
         return result
     }
 
     stringify(){
-        return JSON.stringify(this, (k, v) => {
-            if(typeof v == 'bigint'){
-                if(v > 0xFFFF) return toString(v as Vector3)
-                else return v.toString() + 'n'
-            }
-            if(v instanceof Map)
-                return Object.fromEntries(v.entries())
-            if(v instanceof Set)
-                return [...v]
-            return v
-        }, 4)
+        return JSON.stringify(this, replacer, 4)
     }
 
     //constructor(obj?: any){

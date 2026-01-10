@@ -177,4 +177,35 @@ export abstract class StatsComponent extends Component {
             this.skip[i] = false
         }
     }
+
+    //stats.armorBase = armor
+    //stats.armorBasePerLevel = armorPerLevel
+    //stats.spellBlockBase = spellBlock
+    //stats.spellBlockBasePerLevel = spellBlockPerLevel
+    //stats.dodgeBase = baseDodge
+    //stats.dodgeBasePerLevel = levelDodge
+    //stats.attackSpeedBase = attackSpeed
+    //stats.attackSpeedBasePerLevel = attackSpeedPerLevel
+    //stats.attackDamageBase = baseDamage
+    //stats.attackDamageBasePerLevel = damagePerLevel
+    //stats.critChanceBase = baseCritChance
+    //stats.critChanceBasePerLevel = critPerLevel
+    //stats.critDamageBonus = critDamageBonus
+    //stats.magicDamageBase = baseAbilityPower
+    //stats.magicDamageBasePerLevel = abilityPowerIncPerLevel
+    //stats.healthBase = baseHp
+    //stats.healthBasePerLevel = hpPerLevel
+    //stats.healthRegenBase = baseStaticHpRegen
+    //stats.healthRegenBasePerLevel = hpRegenPerLevel
+    //stats.manaBase = baseMp
+    //stats.manaBasePerLevel = mpPerLevel
+    //stats.manaRegenBase = baseStaticMpRegen
+    //stats.manaRegenBasePerLevel = mpRegenPerLevel
+    //stats.movementSpeedBase = moveSpeed
+
+    //TODO?: WTF is that?
+    //stats.baseSpellEffectiveness = baseSpellEffectiveness
+    //stats.levelSpellEffectiveness = levelSpellEffectiveness
+    //stats.baseFactorHpRegen = baseFactorHpRegen
+    //stats.baseFactorMpRegen = baseFactorMpRegen
 }
