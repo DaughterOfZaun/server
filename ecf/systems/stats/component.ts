@@ -18,11 +18,18 @@ export abstract class StatsComponent extends Component {
     baseDodge: number = 0
     dodgePerLevel: number = 0
     flatDodgeMod: number = 0
+
     flatMissChanceMod: number = 0
     
-    attackRange: number = 0
+    baseAttackRange: number = 0
     flatAttackRangeMod: number = 0
     permanentFlatAttackRangeMod: number = 0
+    get attackRange(): number {
+        return (
+            this.baseAttackRange +
+            this.flatAttackRangeMod + this.permanentFlatAttackRangeMod
+        )
+    }
     
     flatBubbleRadiusMod: number = 0
     permanentFlatBubbleRadiusMod: number = 0
@@ -40,14 +47,21 @@ export abstract class StatsComponent extends Component {
     critDamageMultiplier: number = 0
     
     health: number = 0
+    get healthPercent(): number {
+        return this.health / this.maxHealth
+    }
+    
     baseHealth: number = 0
     healthPerLevel: number = 0
-    healthPercent: number = 0
-    
-    maxHealth: number = 0
     flatHPPoolMod: number = 0
     permanentFlatHPPoolMod: number = 0
     percentHPPoolMod: number = 0
+    get maxHealth(): number {
+        return (
+            this.baseHealth + this.healthPerLevel * this.level +
+            this.flatHPPoolMod + this.permanentFlatHPPoolMod
+        ) * (1 + this.percentHPPoolMod)
+    }
     
     hpRegenRate: number = 0
     flatHPRegenMod: number = 0
@@ -56,11 +70,11 @@ export abstract class StatsComponent extends Component {
     permanentPercentHPRegenMod: number = 0
     
     par: number = 0
+    parPercent: number = 0
+    
+    maxPAR: number = 0
     basePAR: number = 0
     parPerLevel: number = 0
-    parPercent: number = 0
-
-    maxPAR: number = 0
     flatPARPoolMod: number = 0
     permanentFlatPARPoolMod: number = 0
     percentPARPoolMod: number = 0
@@ -76,7 +90,6 @@ export abstract class StatsComponent extends Component {
     permanentFlatMagicDamageMod: number = 0
     percentMagicDamageMod: number = 0
     
-    movementSpeed: number = 0
     baseMoveSpeed: number = 0
     flatMovementSpeedMod: number = 0
     permanentFlatMovementSpeedMod: number = 0
@@ -84,6 +97,13 @@ export abstract class StatsComponent extends Component {
     permanentPercentMovementSpeedMod: number = 0
     percentMultiplicativeMovementSpeedMod: number = 0
     moveSpeedFloorMod: number = 0
+    get movementSpeed(): number {
+        return (
+            this.baseMoveSpeed +
+            this.flatMovementSpeedMod + this.permanentFlatMovementSpeedMod
+        ) * (1 + this.percentMovementSpeedMod + this.permanentPercentMovementSpeedMod)
+          * (1 + this.percentMultiplicativeMovementSpeedMod)
+    }
     
     attackSpeed: number = 0
     baseAttackSpeed: number = 0
@@ -207,6 +227,8 @@ export abstract class StatsComponent extends Component {
 
     load(data: CharacterData) {
 
+        this.baseAttackRange = data.attackRange!
+
         this.baseArmor = data.armor!
         this.armorPerLevel = data.armorPerLevel!
 
@@ -226,8 +248,8 @@ export abstract class StatsComponent extends Component {
         this.critChancePerLevel = data.critPerLevel!
         this.critDamageMultiplier = data.critDamageBonus!
 
-        this.baseAbilityDamage = data.baseAbilityPower!
-        this.magicDamagePerLevel = data.abilityPowerIncPerLevel!
+        this.baseAbilityDamage = data.baseAbilityPower ?? 0
+        this.magicDamagePerLevel = data.abilityPowerIncPerLevel ?? 0
         
         this.baseHealth = data.baseHp!
         this.healthPerLevel = data.hpPerLevel!

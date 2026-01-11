@@ -1,5 +1,6 @@
 import { getBitFlagLE, getX, getZ, vec2, Vector2, Vector3 } from "../math";
 import type { AIState, Orders } from "../ecf/systems/ai/shared";
+import type { Teams } from "../ecf/systems/shared";
 import { Reader, Writer } from "./enet";
 import { replacer } from "../utils";
 
@@ -270,13 +271,6 @@ export enum PayloadType {
     Chat = 104,
     sendToServer = 105,
     broadcastToClients = 106
-}
-
-export enum Teams {
-    Unknown = 0,
-    Unassigned = 99,
-    Order = 100,
-    Chaos = 200,
 }
 
 export enum NetNodeID {

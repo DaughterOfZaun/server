@@ -1,8 +1,17 @@
+import type { int } from "../../../utils";
 import { Component } from "../../component";
 import type { CharacterData } from "../data/data";
+import type { Script } from "../script";
 
 export class Spell {
     cost: number = 0
+    level: int = 1
+    vars?: SpellVars
+    script?: Script
+}
+
+export class SpellVars {
+
 }
 
 export class SpellSlot {
@@ -26,7 +35,5 @@ export class SpellsComponent extends Component {
     get f(){ return this.get(5)! }
     get b(){ return this.get(6)! }
 
-    load(data: CharacterData) {
-        throw new Error("Method not implemented.");
-    }
+    load(data: CharacterData){}
 }

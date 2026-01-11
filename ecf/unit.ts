@@ -1,5 +1,5 @@
 import { Vector3 } from "../math";
-import { Teams } from "../net/pkt";
+import type { Teams } from "./systems/shared";
 import type { AutoAttackComponent } from "./systems/aa/component";
 import type { AIComponent } from "./systems/ai/component";
 import type { BuffComponent } from "./systems/buffs/component";
@@ -8,6 +8,9 @@ import type { MovementComponent } from "./systems/movement/component";
 import type { SpellsComponent } from "./systems/spells/component";
 import type { StatsComponent } from "./systems/stats/component";
 import type { StatusComponent } from "./systems/status/component";
+import type { CharVars } from "../data/characters/vars";
+import type { Avatar } from "../objects/hero";
+import type { PassiveComponent } from "./systems/passive/component";
 
 export class Unit {
 
@@ -23,6 +26,9 @@ export class Unit {
     movement?: MovementComponent
     spells?: SpellsComponent
     status?: StatusComponent
+    passive?: PassiveComponent
+    avatar?: Avatar
+    vars?: CharVars
 
     public reset(){}
     public from(unit: Unit){}

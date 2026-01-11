@@ -1,60 +1,8 @@
 import type { INIReader } from "../../../ini-reader";
 import { toArray, type Vector4 } from "../../../math";
-import { optcall } from "../../../utils";
-
-// The real values are unknown to me.
-enum SearchTags {
-    support = 1 << 0,
-    ranged = 1 << 1,
-    assassin = 1 << 2,
-    stealth = 1 << 3,
-    melee = 1 << 4,
-    carry = 1 << 5,
-    fighter = 1 << 6,
-    jungler = 1 << 7,
-    recommended = 1 << 8,
-    heal = 1 << 9,
-    pusher = 1 << 10,
-    farmer = 1 << 11,
-    tough = 1 << 12,
-    stun = 1 << 13,
-    haste = 1 << 14,
-    mage = 1 << 15,
-    root = 1 << 16,
-    nuke = 1 << 17,
-    tank = 1 << 18,
-    snare = 1 << 19,
-    disabler = 1 << 20,
-    slow = 1 << 21,
-    teleport = 1 << 22,
-    flee = 1 << 23,
-}
-
-enum Classification {
-    Arcane, Deadly, Strong, Hunter
-}
-
-// The real values are unknown to me.
-enum Roles {
-    Attacker = 1 << 0,
-    Brawler = 1 << 1,
-    Mage = 1 << 2,
-    Tank = 1 << 3,
-    Support = 1 << 4,
-}
-
-enum ArmorMaterial {
-    Flesh, Stone, Metal, Wood
-}
-
-enum PARType {
-	Shield, Energy, Other
-}
-
-type int = number
-type bool = boolean
-type float = number
-type Color = Vector4
+import { optcall, type bool, type Color, type float, type int } from "../../../utils";
+import { PARType } from "../stats/shared";
+import { ArmorMaterial, Classification, Roles, SearchTags } from "./shared";
 
 export class CharacterData {
 

@@ -1,29 +1,46 @@
 export enum BuffType {
-    Internal = 0,
-    Aura = 1,
-    CombatEnchancer = 2,
-    CombatDehancer = 3,
-    SpellShield = 4,
-    Stun = 5,
-    Invisibility = 6,
-    Silence = 7,
-    Taunt = 8,
-    Polymorph = 9,
-    Slow = 10,
-    Snare = 11,
-    Damage = 12,
-    Heal = 13,
-    Haste = 14,
-    SpellImmunity = 15,
-    PhysicalImmunity = 16,
-    Invulnerability = 17,
-    Sleep = 18,
-    NearSight = 19,
-    Frenzy = 20,
-    Fear = 21,
-    Net = 22,
-    Poison = 23,
-    Suppression = 24,
-    Blind = 25,
-    AmmoStack = 26
+    INTERNAL = 0,
+    AURA = 1,
+    COMBAT_ENCHANCER = 2,
+    COMBAT_DEHANCER = 3,
+    SPELL_SHIELD = 4,
+    STUN = 5,
+    INVISIBILITY = 6,
+    SILENCE = 7,
+    TAUNT = 8,
+    POLYMORPH = 9,
+    SLOW = 10,
+    SNARE = 11,
+    DAMAGE = 12,
+    HEAL = 13,
+    HASTE = 14,
+    SPELL_IMMUNITY = 15,
+    PHYSICAL_IMMUNITY = 16,
+    INVULNERABILITY = 17,
+    SLEEP = 18,
+    NEAR_SIGHT = 19,
+    FRENZY = 20,
+    FEAR = 21,
+    NET = 22,
+    POISON = 23,
+    SUPPRESSION = 24,
+    BLIND = 25,
+    AMMO_STACK = 26,
+    
+    CHARM,
+}
+
+export enum BuffAddType
+{
+	UNDEFINED,
+	REPLACE_EXISTING,
+	RENEW_EXISTING,
+	STACKS_AND_RENEWS,
+	STACKS_AND_CONTINUE,
+	STACKS_AND_OVERLAPS,
+}
+
+//TODO: Remove?
+export enum EffCreate {
+    UPDATE_ORIENTATION
 }

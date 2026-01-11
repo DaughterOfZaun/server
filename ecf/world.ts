@@ -1,5 +1,5 @@
 import { config } from "../config";
-import { Teams, type BasePacket } from "../net/pkt";
+import { type BasePacket } from "../net/pkt";
 import { Hero } from "../objects/hero";
 import { assign } from "../utils";
 import { CircularArray } from "./circle";
@@ -43,9 +43,12 @@ export class World {
                 player.skinID,
                 true,
             )
+            //TODO: Move.
+            hero.stats.exp = 1
+            hero.stats.gold = 1
+            hero.stats.health = hero.stats.maxHealth
+            hero.passive['script'].onActivate()
         }
-
-        this.systems.stats.update(frame)
     }
 
     public spawn(){

@@ -1,4 +1,5 @@
-import { LookAtType, NetNodeID, Teams } from "../net/pkt";
+import { LookAtType, NetNodeID } from "../net/pkt";
+import { Teams } from "../ecf/systems/shared";
 import { vec2, Vector3 } from "../math"
 import { assign } from '../utils'
 import * as PKT from "../net/pkt"
@@ -11,8 +12,14 @@ import { MovementComponent } from "../ecf/systems/movement/component";
 import { Unit } from "../ecf/unit";
 import { SpellsComponent } from "../ecf/systems/spells/component";
 import { StatusComponent } from "../ecf/systems/status/component";
+import { AvatarVars, CharVars } from "../data/characters/vars";
 import { HeroStats } from "./hero-stats";
 import { client } from "../net/client";
+import { PassiveComponent } from "../ecf/systems/passive/component";
+
+export class Avatar {
+    vars?: AvatarVars
+}
 
 export class Hero extends Unit {
 
@@ -27,11 +34,13 @@ export class Hero extends Unit {
     override movement: MovementComponent = new MovementComponent(this)
     override spells: SpellsComponent = new SpellsComponent(this)
     override status: StatusComponent = new StatusComponent(this)
+    override passive: PassiveComponent = new PassiveComponent(this)
+    override avatar: Avatar = new Avatar()
 
     public spawn(spawnPosIndex: number){
         
         client.send(new PKT.S2C_CreateHero(), {
-            netObjID: 1073741877,
+            netObjID: this.netID,
             playerUID: this.playerID,
             netNodeID: NetNodeID.Spawned,
             skillLevel: this.stats.level,
@@ -49,11 +58,11 @@ export class Hero extends Unit {
             lookAtType: LookAtType.None,
             lookAtPosition: Vector3.Zero,
             movementData: assign(new PKT.MovementDataStop(), {
-                position: vec2(35.9028, 273.5519),
+                position: vec2(200, 5356),
                 forward: vec2(0, 1),
                 syncID: 0,
             }),
-            senderNetID: 1073741877,
+            senderNetID: this.netID,
         })
     }
 }

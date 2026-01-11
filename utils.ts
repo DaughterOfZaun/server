@@ -1,4 +1,9 @@
-import { toObject, type Vector } from "./math"
+import { toObject, Vector4, type Vector } from "./math"
+
+export type int = number
+export type bool = boolean
+export type float = number
+export type Color = Vector4
 
 export function assign<T extends {}>(target: T, source: Partial<T>): T {
     return Object.assign(target, source)

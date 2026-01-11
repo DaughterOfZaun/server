@@ -1,11 +1,12 @@
-import { Teams } from "./net/pkt";
+import { Teams } from "./ecf/systems/shared";
 
 export const config = {
     mapToLoad: 4,
     mapMode: "CLASSIC",
     players: [
         {
-            playerId: 1,
+            playerId: 0,
+            clientID: 0,
             summonerLevel: 30,
             teamID: Teams.Order,
             isBot: false,
@@ -16,7 +17,6 @@ export const config = {
             skinID: 0,
             name: 'Caitlyn',
             skin: 'Caitlyn',
-            clientID: 0,
         },
     ],
 }

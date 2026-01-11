@@ -1,6 +1,7 @@
 import { decrypt, encrypt } from "./blowfish"
 import { Peer, type WrappedPacket } from "./peer"
-import { ENetChannels, Teams, type BasePacket } from "./pkt"
+import { ENetChannels, type BasePacket } from "./pkt"
+import { Teams } from "../ecf/systems/shared"
 import { world } from "../ecf/world"
 import { config } from "../config"
 import { assign } from "../utils"
@@ -59,6 +60,7 @@ export class Client {
         if(obj) assign(packet, obj)
     
         //console.log('sent', packet)
+        //console.log('send', channelID, packet.constructor.name)
         //console.log('read', (new pkt[packet.constructor.name]()).read(data))
         //console.log('data', data)
         //console.log('sent', channelID, data)

@@ -193,7 +193,7 @@ export class HeroAI extends AIComponent {
                     return true
                 } else {
                     if (state == AIState.CHARMED) {
-                        this.spellBuffRemoveType(this.me, BuffType.Taunt)
+                        this.spellBuffRemoveType(this.me, BuffType.TAUNT)
                     }
                     this.netSetState(AIState.STANDING)
                     return true
